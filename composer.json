@@ -1,0 +1,11 @@
+{
+	"name" : "eelly/devtools",
+	"description" : "eelly devtools",
+	"type" : "library",
+	"license" : "MIT",
+	"authors" : [{
+			"name" : "eelly",
+			"email" : "eelly@eelly.com"
+		}
+	]
+}
