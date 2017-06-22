@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 /*
- * PHP version 7.1
+ * This file is part of eelly package.
  *
- * @copyright Copyright (c) 2012-2017 EELLY Inc. (https://www.eelly.com)
- * @link      https://api.eelly.com
- * @license   衣联网版权所有
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Eelly\DevTools\BuildFile;
@@ -15,7 +16,7 @@ use Phalcon\Di\Injectable;
 use Phalcon\DiInterface;
 
 /**
- * 生成基础类
+ * 生成基础类.
  *
  * @author eellytools<localhost.shell@gmail.com>
  */
@@ -180,5 +181,31 @@ EOF;
         $templateFile = $this->templateDir.$fileName.$this->templateExt.$this->fileExt;
 
         return file_exists($templateFile) ? file_get_contents($templateFile) : '';
+    }
+
+    /**
+     * 递归删除目录文件.
+     *
+     * @param unknown $pathName
+     */
+    protected function unlinkFile($pathName): void
+    {
+        if (empty($pathName)) {
+            return;
+        }
+
+        $dirInfo = new \DirectoryIterator($pathName);
+        foreach ($dirInfo as $file) {
+            if ($file->isDot()) {
+                continue;
+            }
+
+            if ($file->isFile()) {
+                @unlink($file->getPathname());
+            } elseif ($file->isDir()) {
+                $this->unlinkFile($file->getPathname());
+            }
+        }
+        rmdir($pathName);
     }
 }

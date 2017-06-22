@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 /*
- * PHP version 7.1
+ * This file is part of eelly package.
  *
- * @copyright Copyright (c) 2012-2017 EELLY Inc. (https://www.eelly.com)
- * @link      https://api.eelly.com
- * @license   衣联网版权所有
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Eelly\DevTools\BuildFile;
@@ -15,7 +16,7 @@ use Phalcon\Db;
 use Phalcon\Db\Adapter\Pdo\Mysql;
 
 /**
- * Model生成类
+ * Model生成类.
  *
  * @author eellytools<localhost.shell@gmail.com>
  */
@@ -55,7 +56,9 @@ class ModelFile extends File
         $config = $this->config;
         $dbName = $config->dbPrefix ? $config->dbPrefix.strtolower($moduleName) : strtolower($moduleName);
         $this->setDirInfo($dirInfo['Mysql']);
-        $this->di->setShared('db', function () use ($dbName, $config) {
+        $errorMessage = '';
+
+        $this->di->setShared('db', function () use ($dbName, $config, &$errorMessage) {
             try {
                 return new Mysql([
                     'host' => $config->dbHost,
@@ -65,11 +68,16 @@ class ModelFile extends File
                     'port' => $config->dbPort,
                     'charset' => $config->dbCharset,
                 ]);
-            }catch (\PDOException $e){
-                echo $dbName. '生成Model失败,' . $e->getMessage() . ',检查数据库配置是否正确' . PHP_EOL;
-                exit;
+            } catch (\PDOException $e) {
+                $errorMessage = $dbName.'生成Model失败,'.$e->getMessage().',检查数据库配置是否正确'.PHP_EOL;
             }
         });
+
+        if (!$this->db instanceof \Phalcon\Db\AdapterInterface || !empty($errorMessage)) {
+            $this->unlinkFile($this->baseDir.'/'.ucfirst($moduleName));
+            exit($errorMessage);
+        }
+
         $tables = $this->getTables();
         if (empty($tables)) {
             echo $moduleName.'模块的表不存在,生成Model失败'.PHP_EOL;
