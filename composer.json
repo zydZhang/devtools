@@ -9,6 +9,13 @@
 			"homepage": "https://www.eelly.com"
 		}
 	],
+	"require": {
+		"friendsofphp/php-cs-fixer": "2.3.2",
+		"jetbrains/phpstorm-stubs": "dev-master",
+		"phpunit/phpunit": "6.2.1",
+		"phalcon/devtools": "3.1.2",
+		"symfony/var-dumper": "3.3.2"
+	},
 	"autoload": {
 		"psr-4": {
 			"Eelly\\Devtools\\":"src"
