@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 /*
- * PHP version 7.1
+ * This file is part of eelly package.
  *
- * @copyright Copyright (c) 2012-2017 EELLY Inc. (https://www.eelly.com)
- * @link      https://api.eelly.com
- * @license   衣联网版权所有
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Eelly\DevTools\BuildFile;
@@ -15,7 +16,7 @@ use Eelly\Acl\Adapter\Database;
 use Phalcon\Db\Adapter\Pdo\Mysql;
 
 /**
- * Module生成类
+ * Module生成类.
  *
  * @author eellytools<localhost.shell@gmail.com>
  */
@@ -52,25 +53,23 @@ class ModuleFile extends File
     public function run(string $moduleName): array
     {
         $oauthDb = $this->config->oauthDb->toArray();
-        $this->di->setShared('oauthDb', function () use($oauthDb){
+        $this->di->setShared('oauthDb', function () use ($oauthDb) {
             return $db = new Mysql($oauthDb);
         });
         $this->di->setShared('eellyAcl', [
             'className' => Database::class,
-            "properties" => [
+            'properties' => [
                 [
-                    "name" => "db",
-                    "value" => [
-                        "type" => "service",
-                        "name" => "oauthDb"
-                    ]
-                ]
-            ]
-
+                    'name' => 'db',
+                    'value' => [
+                        'type' => 'service',
+                        'name' => 'oauthDb',
+                    ],
+                ],
+            ],
         ]);
 
         $this->setModuleName($moduleName);
-        $this->insertModuleAndClient();
 
         return $this->buildModuleDir();
     }
@@ -122,6 +121,8 @@ class ModuleFile extends File
         $this->buildModuleModel();
         // 生成模块配置文件
         $this->buildConfigDir();
+        // 添加到acl库
+        $this->insertModuleAndClient();
 
         return $this->returnModuleDirInfo();
     }
@@ -237,7 +238,7 @@ EOF;
     }
 
     /**
-     * 模块api生成
+     * 模块api生成.
      */
     private function buildModuleApi(): void
     {
@@ -248,7 +249,7 @@ EOF;
     {
         $this->eellyAcl->addModule($this->moduleName);
         $this->eellyAcl->addModuleClient($this->moduleName);
-        $this->eellyAcl->addRole($this->moduleName, null, $this->moduleName . '/*/*');
+        $this->eellyAcl->addRole($this->moduleName, null, $this->moduleName.'/*/*');
         $this->eellyAcl->addRoleClient($this->moduleName, $this->eellyAcl->getClientKeyByModuleName($this->moduleName));
     }
 }

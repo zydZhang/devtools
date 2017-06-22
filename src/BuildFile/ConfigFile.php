@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 /*
- * PHP version 7.1
+ * This file is part of eelly package.
  *
- * @copyright Copyright (c) 2012-2017 EELLY Inc. (https://www.eelly.com)
- * @link      https://api.eelly.com
- * @license   衣联网版权所有
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Eelly\DevTools\BuildFile;
@@ -52,7 +53,7 @@ class ConfigFile extends File
         foreach ($this->configDir as $dir) {
             $filePath = $dir.$moduleName.$this->fileExt;
             $this->buildModuleFile($filePath);
-            $configDir = $dir . $moduleName;
+            $configDir = $dir.$moduleName;
             !is_dir($configDir) && mkdir($configDir, 0755, true);
 
             foreach ($this->configFile as $file) {
