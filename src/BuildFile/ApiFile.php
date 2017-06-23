@@ -13,7 +13,9 @@ declare(strict_types=1);
 namespace Eelly\DevTools\BuildFile;
 
 use Eelly\Acl\Adapter\Database;
+use Eelly\DevTools\Traits\SDKDirTrait;
 use Phalcon\Db\Adapter\Pdo\Mysql;
+use Phalcon\DiInterface;
 
 /**
  * Api生成类.
@@ -22,12 +24,14 @@ use Phalcon\Db\Adapter\Pdo\Mysql;
  */
 class ApiFile extends File
 {
+    use SDKDirTrait;
+
     /**
      * sdk目录.
      *
      * @var string
      */
-    protected $sdkDir = 'eelly/eelly-sdk-php/src/';
+    protected $sdkDir;
 
     /**
      * service目录.
@@ -98,6 +102,15 @@ class ApiFile extends File
     protected $serviceName = '';
 
     /**
+     * @param DiInterface $di
+     */
+    public function __construct(DiInterface $di)
+    {
+        parent::__construct($di);
+        $this->sdkDir = $this->getEellySDKPath();
+    }
+
+    /**
      * api构建.
      *
      * @param string $moduleName
@@ -105,12 +118,6 @@ class ApiFile extends File
      */
     public function run(string $moduleName, array $logicDirInfo): void
     {
-        //         $this->moduleName = $moduleName;
-//         $this->sdkDir .= ucfirst($this->moduleName);
-//         $this->serviceDir = $this->sdkDir . '/Service';
-//         $this->apiDir = $this->sdkDir . '/Api';
-//         $this->serviceNamespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Service\\';
-//         $this->apiNamespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Api';
         $this->setModuleName($moduleName)->setDir()->setNamespace()->setLogicDir($logicDirInfo)->buildApiFile();
     }
 
