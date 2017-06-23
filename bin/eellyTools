@@ -1,0 +1,4 @@
+#!/usr/bin/env php
+<?php
+$dir = getcwd();
+require $dir.'/public/index.php';
