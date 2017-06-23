@@ -18,5 +18,13 @@
 		"psr-4": {
 			"Eelly\\DevTools\\":"src"
 		}
-	}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Eelly\\DevTools\\":"tests/src"
+		}
+	},
+	"bin": [
+		"bin/eellyTools"
+	]
 }
