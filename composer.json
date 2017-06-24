@@ -1,11 +1,30 @@
 {
-	"name" : "eelly/devtools",
-	"description" : "eelly devtools",
-	"type" : "library",
-	"license" : "MIT",
-	"authors" : [{
-			"name" : "eelly",
-			"email" : "eelly@eelly.com"
+	"name": "eelly/devtools",
+	"description": "eelly devtools",
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Eelly",
+			"homepage": "https://www.eelly.com"
 		}
+	],
+	"require": {
+		"php": "^7.1.3",
+		"ext-phalcon": "^3.1.2",
+		"phalcon/devtools": "3.1.2"
+	},
+	"autoload": {
+		"psr-4": {
+			"Eelly\\DevTools\\":"src"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Eelly\\DevTools\\":"tests/src"
+		}
+	},
+	"bin": [
+		"bin/eellyTools"
 	]
 }

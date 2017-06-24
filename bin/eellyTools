@@ -1,0 +1,5 @@
+#!/usr/bin/env php
+<?php
+$dir = getcwd();
+chdir($dir);
+require 'var/config/config.php';

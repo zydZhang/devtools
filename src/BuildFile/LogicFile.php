@@ -2,46 +2,46 @@
 
 declare(strict_types=1);
 /*
- * PHP version 7.1
+ * This file is part of eelly package.
  *
- * @copyright Copyright (c) 2012-2017 EELLY Inc. (https://www.eelly.com)
- * @link      https://api.eelly.com
- * @license   衣联网版权所有
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Eelly\DevTools\BuildFile;
 
 /**
- * Logic生成类
+ * Logic生成类.
  *
  * @author eellytools<localhost.shell@gmail.com>
  */
 class LogicFile extends File
 {
-
     /**
-     * logic目录
+     * logic目录.
      *
      * @var string
      */
     protected $logicDir = '';
 
     /**
-     * logic命名空间
+     * logic命名空间.
      *
      * @var string
      */
-    protected $logicNamespace= '';
+    protected $logicNamespace = '';
 
     /**
-     * logic后缀名
+     * logic后缀名.
      *
      * @var string
      */
     protected $extName = 'Logic';
 
     /**
-     * logic构建
+     * logic构建.
      *
      * @param array $dirInfo
      * @param array $tables
@@ -53,7 +53,7 @@ class LogicFile extends File
     }
 
     /**
-     * 设置目录/命名空间
+     * 设置目录/命名空间.
      *
      * @param array $dirInfo
      */
@@ -64,7 +64,8 @@ class LogicFile extends File
     }
 
     /**
-     * 生成logic
+     * 生成logic.
+     *
      * @param array $tables
      */
     private function buildLogic(array $tables): void
@@ -87,37 +88,38 @@ class LogicFile extends File
     }
 
     /**
-     * 生成聚合目录
+     * 生成聚合目录.
      *
      * @param string $aggregateRoot
      */
     private function buildAggregateDir(string $aggregateRoot): void
     {
-        $dirParh = $this->logicDir . '/' . $aggregateRoot;
+        $dirParh = $this->logicDir.'/'.$aggregateRoot;
         !is_dir($dirParh) && mkdir($dirParh, 0755);
     }
 
     /**
-     * 生成logic文件
+     * 生成logic文件.
      *
      * @param string $aggregate
      * @param string $aggregateRoot
      */
     private function buildLogicFile(string $aggregate, string $aggregateRoot): void
     {
-        $filePath = $this->logicDir . '/' . (! empty($aggregateRoot) ? $aggregateRoot . '/' . $aggregate . 'Business' : $aggregate . $this->extName) . $this->fileExt;
-        if (! file_exists($filePath)) {
-            $fileCode = ! empty($aggregateRoot) ? $this->getBusinessLogicFileCode($aggregate, $aggregateRoot) : $this->getLogicFileCode($aggregate);
+        $filePath = $this->logicDir.'/'.(!empty($aggregateRoot) ? $aggregateRoot.'/'.$aggregate.'Business' : $aggregate.$this->extName).$this->fileExt;
+        if (!file_exists($filePath)) {
+            $fileCode = !empty($aggregateRoot) ? $this->getBusinessLogicFileCode($aggregate, $aggregateRoot) : $this->getLogicFileCode($aggregate);
             $fp = fopen($filePath, 'w');
             fwrite($fp, $fileCode);
         }
     }
 
     /**
-     * 获取logic文件的code
+     * 获取logic文件的code.
      *
      * @param string $aggregate
      * @param string $aggregateRoot
+     *
      * @return string
      */
     private function getLogicFileCode(string $aggregate): string
@@ -127,30 +129,31 @@ class LogicFile extends File
         $useNamespace = [
             'Eelly\\Mvc\\LogicController',
         ];
-        $className = $aggregate . $this->extName;
+        $className = $aggregate.$this->extName;
         $extendsName = 'LogicController';
         $className = $this->getClassName($className, $extendsName);
         $namespace = $this->getNamespace($namespace);
         $useNamespace = $this->getUseNamespace($useNamespace);
 
-        return sprintf($templates, $namespace, $useNamespace, $className, '' ,'');
+        return sprintf($templates, $namespace, $useNamespace, $className, '', '');
     }
 
     /**
-     * 获取BusinessLogic文件的code
+     * 获取BusinessLogic文件的code.
      *
      * @param string $aggregate
      * @param string $aggregateRoot
+     *
      * @return string
      */
     private function getBusinessLogicFileCode(string $aggregate, string $aggregateRoot): string
     {
         $templates = $this->getTemplateFile('Base');
-        $namespace = $this->logicNamespace . '\\' . $aggregateRoot;
+        $namespace = $this->logicNamespace.'\\'.$aggregateRoot;
         $useNamespace = [
-            'Eelly\\Mvc\\User\Business'
+            'Eelly\\Mvc\\User\Business',
         ];
-        $className = $aggregate . 'Business';
+        $className = $aggregate.'Business';
         $extendsName = 'Business';
         $className = $this->getClassName($className, $extendsName);
         $namespace = $this->getNamespace($namespace);
