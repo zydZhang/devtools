@@ -27,7 +27,7 @@ class DevTools extends Injectable
 
     public function run(): void
     {
-        if ('cli' === PHP_SAPI) {
+        if ('cli' === PHP_SAPI && $this->config->buildMode) {
             $this->cliTools();
         } elseif (\Eelly\Mvc\Application::ENV_PRODUCTION == $this->config->env && $this->config->mysqlMode) {
             $eventsManager = $this->di->getEventsManager();
@@ -41,7 +41,7 @@ class DevTools extends Injectable
     public function cliTools(): void
     {
         $argv = isset($GLOBALS['argv']) ? array_map('strtolower', $GLOBALS['argv']) : [];
-        if ($this->config->buildMode && !empty($argv)) {
+        if (!empty($argv)) {
             $actionName = $argv[0] ?? '';
             !is_callable([$this, $actionName.'Action']) && exit($actionName.'操作不存在');
             array_shift($argv);
