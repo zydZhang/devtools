@@ -29,7 +29,7 @@ class DevTools extends Injectable
     {
         if ('cli' === PHP_SAPI && $this->config->buildMode) {
             $this->cliTools();
-        } elseif (\Eelly\Mvc\Application::ENV_PRODUCTION == $this->config->env && $this->config->mysqlMode) {
+        } elseif (\Eelly\Application\AbstractApplication::ENV_PRODUCTION == $this->config->env && $this->config->mysqlMode) {
             $eventsManager = $this->di->getEventsManager();
             $eventsManager->attach('db', new DbListerner());
         }
