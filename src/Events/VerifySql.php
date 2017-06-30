@@ -23,9 +23,9 @@ class VerifySql extends Injectable
      * sql 规则.
      */
     private $sqlRule = [
-        'likeVerify' => ['/WHERE(.*)(\s+)LIKE(\s+)\'%([^%]*)%\'/i', 'SQL查询条件中LIKE不能同时使用左右%号：'],
-        'allVerify' => ['/SELECT(\s+)(((\`(\w+)\`)|(\w+))\.)?\*/i', 'SQL查询禁用*符号：'],
-        'randVerify' => ['/order\s+rand/i', 'SQL查询禁用rand排序：'],
+        'likeVerify'    => ['/WHERE(.*)(\s+)LIKE(\s+)\'%([^%]*)%\'/i', 'SQL查询条件中LIKE不能同时使用左右%号：'],
+        'allVerify'     => ['/SELECT(\s+)(((\`(\w+)\`)|(\w+))\.)?\*/i', 'SQL查询禁用*符号：'],
+        'randVerify'    => ['/order\s+rand/i', 'SQL查询禁用rand排序：'],
         'regularVerify' => ['/where.+\sregexp\s+(\'|")/i', 'SQL查询禁用正则：'],
     ];
 

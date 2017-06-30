@@ -57,10 +57,10 @@ class ModuleFile extends File
             return $db = new Mysql($oauthDb);
         });
         $this->di->setShared('eellyAcl', [
-            'className' => Database::class,
+            'className'  => Database::class,
             'properties' => [
                 [
-                    'name' => 'db',
+                    'name'  => 'db',
                     'value' => [
                         'type' => 'service',
                         'name' => 'oauthDb',
@@ -82,7 +82,7 @@ class ModuleFile extends File
     public function returnModuleDirInfo(): array
     {
         return [
-            'moduleDir' => $this->moduleDir,
+            'moduleDir'     => $this->moduleDir,
             'moduleDirInfo' => $this->moduleDirInfo,
         ];
     }
@@ -150,14 +150,14 @@ class ModuleFile extends File
         $className = $this->getClassName('Module', 'AbstractModule');
         $properties = [
             'NAMESPACE' => [
-                'type' => 'const',
+                'type'      => 'const',
                 'qualifier' => 'public',
-                'value' => '__NAMESPACE__',
+                'value'     => '__NAMESPACE__',
             ],
             'NAMESPACE_DIR' => [
-                'type' => 'const',
+                'type'      => 'const',
                 'qualifier' => 'public',
-                'value' => '__DIR__',
+                'value'     => '__DIR__',
             ],
         ];
         $properties = $this->getClassProperties($properties);
