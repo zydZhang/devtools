@@ -20,10 +20,10 @@ class ConfigFile extends File
      * @var array
      */
     protected $configDir = [
-        'dev' => 'var/config/dev/',
-        'test' => 'var/config/test/',
+        'dev'   => 'var/config/dev/',
+        'test'  => 'var/config/test/',
         'local' => 'var/config/local/',
-        'prod' => 'var/config/prod/',
+        'prod'  => 'var/config/prod/',
     ];
 
     /**

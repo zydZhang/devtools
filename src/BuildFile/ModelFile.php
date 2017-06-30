@@ -61,12 +61,12 @@ class ModelFile extends File
         $this->di->setShared('db', function () use ($dbName, $config, &$errorMessage) {
             try {
                 return new Mysql([
-                    'host' => $config->dbHost,
+                    'host'     => $config->dbHost,
                     'username' => $config->dbUser,
                     'password' => $config->dbPass,
-                    'dbname' => $dbName,
-                    'port' => $config->dbPort,
-                    'charset' => $config->dbCharset,
+                    'dbname'   => $dbName,
+                    'port'     => $config->dbPort,
+                    'charset'  => $config->dbCharset,
                 ]);
             } catch (\PDOException $e) {
                 $errorMessage = $dbName.'生成Model失败,'.$e->getMessage().',检查数据库配置是否正确'.PHP_EOL;
@@ -121,32 +121,32 @@ class ModelFile extends File
                 $pk = $pVal['COLUMN_NAME'];
             }
             $p[$pVal['COLUMN_NAME']] = [
-                'type' => 'general',
+                'type'      => 'general',
                 'qualifier' => 'public',
-                'tips' => $this->getCommentary($pVal),
+                'tips'      => $this->getCommentary($pVal),
             ];
         }
         !empty($pk) && $p['pk'] = [
-            'type' => 'general',
+            'type'      => 'general',
             'qualifier' => 'protected',
-            'value' => $pk,
+            'value'     => $pk,
             'valueType' => 'string',
-            'tips' => $this->getPropertiesCommentary('主键', 'int'),
+            'tips'      => $this->getPropertiesCommentary('主键', 'int'),
         ];
         $p['tableName'] = [
-            'type' => 'general',
+            'type'      => 'general',
             'qualifier' => 'protected',
-            'value' => $this->getTableNameByModelName($modelName),
+            'value'     => $this->getTableNameByModelName($modelName),
             'valueType' => 'string',
-            'tips' => $this->getPropertiesCommentary('表名', 'string'),
+            'tips'      => $this->getPropertiesCommentary('表名', 'string'),
         ];
         $fields = implode(',', array_column($properties, 'COLUMN_NAME'));
         $fieldsValue = '['.PHP_EOL.str_repeat(' ', 8)."'base' => '{$fields}',".PHP_EOL.str_repeat(' ', 4).']';
         $p['filedScope'] = [
-            'type' => 'general',
+            'type'      => 'general',
             'qualifier' => 'protected',
-            'value' => $fieldsValue,
-            'tips' => $this->getPropertiesCommentary('字段空间', 'array'),
+            'value'     => $fieldsValue,
+            'tips'      => $this->getPropertiesCommentary('字段空间', 'array'),
         ];
 
         $properties = $this->getClassProperties($p);

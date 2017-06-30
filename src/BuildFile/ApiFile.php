@@ -244,10 +244,10 @@ class ApiFile extends File
             return $db = new Mysql($oauthDb);
         });
         $this->di->setShared('eellyAcl', [
-                'className' => Database::class,
+                'className'  => Database::class,
                 'properties' => [
                     [
-                        'name' => 'db',
+                        'name'  => 'db',
                         'value' => [
                             'type' => 'service',
                             'name' => 'oauthDb',
@@ -304,9 +304,9 @@ class ApiFile extends File
             $methodBuild[] = [
                 'document' => $methodDoc,
                 'modifier' => \Reflection::getModifierNames($method->getModifiers())[1],
-                'name' => $method->getName(),
-                'params' => $this->getMethodParams($method->getParameters()),
-                'return' => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : '',
+                'name'     => $method->getName(),
+                'params'   => $this->getMethodParams($method->getParameters()),
+                'return'   => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : '',
             ];
         }
 
@@ -325,11 +325,11 @@ class ApiFile extends File
         $methodParams = [];
         foreach ($params as $param) {
             $methodParams[] = [
-                'name' => $param->getName(),
-                'position' => $param->getPosition(),
-                'type' => ($param->getType() instanceof \ReflectionNamedType) ? $param->getType()->getName() : '',
+                'name'          => $param->getName(),
+                'position'      => $param->getPosition(),
+                'type'          => ($param->getType() instanceof \ReflectionNamedType) ? $param->getType()->getName() : '',
                 'hasDefaultVal' => $param->isDefaultValueAvailable(),
-                'defaultVal' => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : '',
+                'defaultVal'    => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : '',
             ];
         }
 
@@ -521,9 +521,9 @@ EOF;
         if (isset($descriptions['param'])) {
             foreach ($descriptions['param'] as $paramId => $param) {
                 $requestData[] = [
-                    'param_id' => $paramId,
-                    'type' => $param[1] ?? '',
-                    'comment' => $param[3] ?? '',
+                    'param_id'     => $paramId,
+                    'type'         => $param[1] ?? '',
+                    'comment'      => $param[3] ?? '',
                     'created_time' => time(),
                 ];
             }
@@ -531,9 +531,9 @@ EOF;
         $this->eellyAcl->addPermissionRequest($requestData, $hashName);
 
         $returnData = [
-            'dto_name' => $descriptions['return']['dto'] ?? '',
+            'dto_name'       => $descriptions['return']['dto'] ?? '',
             'return_example' => $descriptions['return']['example'] ?? '',
-            'created_time' => time(),
+            'created_time'   => time(),
         ];
         $this->eellyAcl->addPermissionReturn($returnData, $hashName);
     }
