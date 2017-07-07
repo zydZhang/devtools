@@ -34,8 +34,10 @@ class DevTools extends Injectable
 
         if ('cli' === PHP_SAPI && $this->config->buildMode) {
             $this->cliTools();
-        } else{
+        } elseif('cli' === PHP_SAPI && !$this->config->buildMode){
             exit('var/config/devtools.php下====>buildMode模式未启用');
+        }else{
+            return;
         }
     }
 
