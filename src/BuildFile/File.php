@@ -34,7 +34,7 @@ class File extends Injectable
      *
      * @var string
      */
-    protected $templateDir = 'eelly/devtools/templates/';
+    protected $templateDir = __DIR__ . '/../../templates/';
 
     /**
      * 模板后缀

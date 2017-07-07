@@ -107,7 +107,7 @@ class ApiFile extends File
     public function __construct(DiInterface $di)
     {
         parent::__construct($di);
-        $this->sdkDir = $this->getEellySDKPath();
+        $this->sdkDir = rtrim($this->getEellySDKPath(), '/') . '/';
     }
 
     /**
