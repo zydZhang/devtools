@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
-$dir = getcwd();
+//$dir = getcwd();
+$dir = strchr(__DIR__, '/vendor', true);
 chdir($dir);
 require 'var/config/config.php';
