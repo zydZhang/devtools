@@ -56,27 +56,21 @@ class ModelFile extends File
         $config = $this->config;
         $dbName = $config->dbPrefix ? $config->dbPrefix.strtolower($moduleName) : strtolower($moduleName);
         $this->setDirInfo($dirInfo['Mysql']);
-        $errorMessage = '';
 
-        $this->di->setShared('db', function () use ($dbName, $config, &$errorMessage) {
-            try {
-                return new Mysql([
-                    'host'     => $config->dbHost,
-                    'username' => $config->dbUser,
-                    'password' => $config->dbPass,
-                    'dbname'   => $dbName,
-                    'port'     => $config->dbPort,
-                    'charset'  => $config->dbCharset,
-                ]);
-            } catch (\PDOException $e) {
-                $errorMessage = $dbName.'生成Model失败,'.$e->getMessage().',检查数据库配置是否正确'.PHP_EOL;
-            }
-        });
-
-        if (!$this->db instanceof \Phalcon\Db\AdapterInterface || !empty($errorMessage)) {
-            $this->unlinkFile($this->baseDir.'/'.ucfirst($moduleName));
-            exit($errorMessage);
+        try {
+            $db = new Mysql([
+                'host' => $config->dbHost,
+                'username' => $config->dbUser,
+                'password' => $config->dbPass,
+                'dbname' => $dbName,
+                'port' => $config->dbPort,
+                'charset' => $config->dbCharset
+            ]);
+        } catch (\PDOException $e) {
+            $this->unlinkFile($this->baseDir . '/' . ucfirst($moduleName));
+            exit($dbName . '生成Model失败,' . $e->getMessage() . ',检查数据库配置是否正确' . PHP_EOL . $dbName . '模块构建失败');
         }
+        $this->di->setShared('db', $db);
 
         $tables = $this->getTables();
         if (empty($tables)) {
