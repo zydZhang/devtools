@@ -155,7 +155,7 @@ class ModelFile extends File
      */
     private function getTables(): array
     {
-        $statement = $this->db->query('SHOW TABLES');
+        $statement = $this->di->getDb()->query('SHOW TABLES');
         $tables = $statement->fetchAll(Db::FETCH_COLUMN);
 
         return $tables;
@@ -171,7 +171,7 @@ class ModelFile extends File
      */
     private function getProperties(string $dbName, string $tableName): array
     {
-        $statement = $this->db->query("SELECT COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT FROM
+        $statement = $this->di->getDb()->query("SELECT COLUMN_NAME,DATA_TYPE,COLUMN_KEY,COLUMN_COMMENT FROM
             information_schema. COLUMNS WHERE table_schema = '{$dbName}' AND table_name = '{$tableName}';");
         $properties = $statement->fetchAll(Db::FETCH_ASSOC);
 
