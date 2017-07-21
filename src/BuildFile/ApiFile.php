@@ -16,6 +16,7 @@ use Eelly\Acl\Adapter\Database;
 use Eelly\DevTools\Traits\SDKDirTrait;
 use Phalcon\Db\Adapter\Pdo\Mysql;
 use Phalcon\DiInterface;
+use Phalcon\Db;
 
 /**
  * Api生成类.
@@ -215,9 +216,9 @@ class ApiFile extends File
     private function buildApiFile(): void
     {
         if (!is_dir($this->serviceDir)) {
-            echo $this->serviceDir.'目录不存在,生成Api失败...'.PHP_EOL;
-
-            return;
+            mkdir($this->serviceDir, 0755, true);
+            echo $this->serviceDir.'目录不存在,已自动生成service...'.PHP_EOL;
+            $this->buildInterface();
         }
 
         !is_dir($this->apiDir) && mkdir($this->apiDir, 0755, true);
@@ -536,5 +537,38 @@ EOF;
             'created_time'   => time(),
         ];
         $this->eellyAcl->addPermissionReturn($returnData, $hashName);
+    }
+
+    /**
+     * 生成service内的interface文件
+     */
+    private function buildInterface()
+    {
+        $statement = $this->di->getDb()->query('SHOW TABLES');
+        $tables = $statement->fetchAll(Db::FETCH_COLUMN);
+        $interfaces = [];
+        // 转换interface名称
+        foreach($tables as $table){
+            $interfaceName = substr_count($table, '_') ? ltrim(strchr($table, '_'), '_') : $table;
+            $interfaceNameArr = explode('_', $interfaceName);
+            $interfaces[] = array_reduce($interfaceNameArr, function ($str, $val) {
+                return $str .= ucfirst($val);
+            });
+        }
+
+        $templates = $this->getTemplateFile('Base');
+        foreach ($interfaces as $interface){
+            $className = $interface . 'Interface';
+            $classPath = $this->serviceDir . '/' . $className . $this->fileExt;
+            if(file_exists($className)){
+                continue;
+            }
+
+            $namespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Service';
+            $className = $this->getInterfaceName($className);
+            $namespace = $this->getNamespace($namespace);
+
+            file_put_contents($classPath, sprintf($templates, $namespace, '', $className, '', ''));
+        }
     }
 }
