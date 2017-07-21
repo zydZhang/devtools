@@ -44,6 +44,27 @@ class ModuleFile extends File
     protected $moduleName = '';
 
     /**
+     * 模块文件导入命名空间
+     *
+     * @var array
+     */
+    protected $moduleFileUserNamespace = [
+        'Eelly\Events\Listener\AclListener',
+        'Eelly\Events\Listener\ApiLoggerListener',
+        'Eelly\Events\Listener\AsyncAnnotationListener',
+        'Eelly\Events\Listener\CacheAnnotationListener',
+        'Eelly\Events\Listener\ValidationAnnotationListener',
+        'Eelly\FastDFS\Client as FastDFSClient',
+        'Eelly\Mvc\AbstractModule',
+        'Member\Command\TestCommand',
+        'Phalcon\DiInterface as Di',
+        'Symfony\Component\Console\ConsoleEvents',
+        'Symfony\Component\Console\Event\ConsoleCommandEvent',
+        'Symfony\Component\Console\Event\ConsoleErrorEvent',
+        'Symfony\Component\Console\Event\ConsoleTerminateEvent',
+    ];
+
+    /**
      * 模块构建.
      *
      * @param string $moduleName
@@ -115,10 +136,10 @@ class ModuleFile extends File
         $this->buildModuleFile();
         // 生成模块子目录
         $this->buildChildDir();
-        // 生成api
-        $this->buildModuleApi();
         // 模块下model生成
         $this->buildModuleModel();
+        // 生成api
+        $this->buildModuleApi();
         // 生成模块配置文件
         $this->buildConfigDir();
         // 添加到acl库
@@ -146,7 +167,7 @@ class ModuleFile extends File
         $templates = file_get_contents($this->templateDir.'BaseTemplate.php');
 
         $namespace = $this->getNamespace(ucfirst($this->moduleName));
-        $useNamespace = $this->getUseNamespace(['Eelly\Mvc\AbstractModule']);
+        $useNamespace = $this->getUseNamespace($this->moduleFileUserNamespace);
         $className = $this->getClassName('Module', 'AbstractModule');
         $properties = [
             'NAMESPACE' => [
@@ -200,25 +221,7 @@ class ModuleFile extends File
      */
     private function getClassBody(): string
     {
-        return <<<EOF
-    /**
-     * {@inheritdoc}
-     *
-     * @see \Eelly\Mvc\AbstractModule::registerUserAutoloaders()
-     */
-    public function registerUserAutoloaders(\Phalcon\DiInterface \$dependencyInjector = null): void
-    {
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @see \Eelly\Mvc\AbstractModule::registerUserServices()
-     */
-    public function registerUserServices(\Phalcon\DiInterface \$dependencyInjector): void
-    {
-    }
-EOF;
+        return $this->getTemplateFile('ModuleFileBody');
     }
 
     /**

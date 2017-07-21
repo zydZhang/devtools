@@ -208,4 +208,20 @@ EOF;
         }
         rmdir($pathName);
     }
+
+    /**
+     * 获取接口名.
+     *
+     * @param string $interfaceName
+     * @param string $extends
+     *
+     * @return string
+     */
+    protected function getInterfaceName(string $interfaceName, string $extends = ''): string
+    {
+        $interface = 'interface '.$interfaceName;
+        !empty($extends) && $interface.= ' extends '.$extends;
+
+        return $interface;
+    }
 }
