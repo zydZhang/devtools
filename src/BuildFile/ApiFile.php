@@ -271,7 +271,12 @@ class ApiFile extends File
         $this->initUseNamespace('Api');
         $interfaceName = $this->serviceNamespace.$apiImplements;
         $this->setUseNamespace($interfaceName);
-        $interfaceReflection = new \ReflectionClass($interfaceName);
+        try{
+            $interfaceReflection = new \ReflectionClass($interfaceName);
+        }catch (\ReflectionException $e){
+            exit($e->getMessage() . '，请确保Service内的Interface存在');
+        }
+
         $methods = $interfaceReflection->getMethods();
         // 获取api需生成的方法code
         $classBody = $this->getApiMethodCode($methods, $isLogic);
@@ -295,19 +300,19 @@ class ApiFile extends File
         $methodBuild = [];
         foreach ($methods as $method) {
             $methodDoc = $method->getDocComment();
+            $methodParam = $this->getMethodParams($method->getParameters());
             if ($isLogic) {
                 $hashName = strtolower(str_replace(['\\', 'Logic/', 'Logic'], ['/'], $this->serviceName)).'/'.$method->getName();
                 $descriptions = !empty($methodDoc) ? $this->getMethodDescription($methodDoc) : [];
-                $this->addPermission($hashName, $descriptions);
-                //$this->eellyAcl->addPermission($descriptions['method'], $hashName, $this->serviceName);
+                $this->addPermission($hashName, $methodParam, $descriptions);
             }
 
             $methodBuild[] = [
                 'document' => $methodDoc,
                 'modifier' => \Reflection::getModifierNames($method->getModifiers())[1],
-                'name'     => $method->getName(),
-                'params'   => $this->getMethodParams($method->getParameters()),
-                'return'   => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : '',
+                'name' => $method->getName(),
+                'params' => $methodParam,
+                'return' => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : ''
             ];
         }
 
@@ -360,7 +365,7 @@ class ApiFile extends File
     }\n\n
 EOF;
         }
-
+        !$isLogic && $str .= $this->getInstanceCode();
         return $str;
     }
 
@@ -487,24 +492,31 @@ EOF;
     private function getMethodDescription(string $docComment): array
     {
         if (empty($docComment)) {
-            return '';
+            return [];
         }
-        $methodDescription = $paramDescription = $paramArr = $returnArr = [];
-        $description = strstr($docComment, '.', true);
-        $methodDescription['method'] = !empty($description) ? strtr($description, ['/' => '', PHP_EOL => '', '*' => '', ' ' => '']) : '';
-
-        preg_match_all('/@param.*/', $docComment, $paramArr);
-        !empty($paramArr[0]) && array_walk($paramArr[0], function ($val) use (&$paramDescription) {
-            $paramDescription[] = explode(' ', $val);
-        });
-        $methodDescription['param'] = $paramDescription;
-
-        preg_match('/@return\s+.*/', $docComment, $returnArr);
-        isset($returnArr[0]) && $methodDescription['return']['dto'] = strstr($returnArr[0], ' ');
-
-        preg_match('/@returnExample\((.*)\)/', $docComment, $returnArr);
-        $methodDescription['return']['example'] = $returnArr[1] ?? '';
-
+        // 方法名和方法描述
+        $methodDescription = $paramDescription = $requestExample = $returnExample = [];
+        preg_match('/[\/*\s]+([^@\n]*)[*\s]+([^@\n]*)/', $docComment, $description);
+        $methodDescription['methodName'] = $description[1] ?? '';
+        $methodDescription['methodDescribe'] = $description[2] ?? '';
+        // 参数描述
+        preg_match_all('/@param.*\$[\w]*\s+([^\s\*]*)\n/U', $docComment, $paramArr);
+        $methodDescription['paramDescribe'] = $paramArr[1] ?? [];
+        // 请求参数示例
+        preg_match('/@requestExample\((.*)\)/', $docComment, $requestExample);
+        $methodDescription['requestExample'] = $requestExample[1] ?? '';
+        // 返回参数示例
+        preg_match('/@returnExample\((.*)\)/', $docComment, $returnExample);
+        $methodDescription['returnExample'] = $returnExample[1] ?? '';
+        // 返回参数和异常类型、描述
+        preg_match_all('/@(return|throws)\s+([^\s]+)\s+([^\s\]*\/]*)/', $docComment, $returnDescription);
+        foreach($returnDescription[1] as $key => $val){
+            $methodDescription['returnInfo'][] = [
+                'type' => $val,
+                'returnValue' => $returnDescription[2][$key] ?? '',
+                'returnDescribe' => $returnDescription[3][$key] ?? '',
+            ];
+        }
         return $methodDescription;
     }
 
@@ -512,31 +524,52 @@ EOF;
      * 添加到权限表.
      *
      * @param string $hashName
+     * @param array $methodParam
      * @param array  $descriptions
      */
-    private function addPermission(string $hashName, array $descriptions): void
+    private function addPermission(string $hashName, array $methodParam, array $descriptions): void
     {
-        $requestData = $returnData = [];
-        $this->eellyAcl->addPermission($descriptions['method'] ?? '', $hashName, $this->serviceName);
+        $requestData = $returnData = $permissionData = [];
 
-        if (isset($descriptions['param'])) {
-            foreach ($descriptions['param'] as $paramId => $param) {
+        $permissionData = [
+            'methodName' => $descriptions['methodName'] ?? '',
+            'requestExample' => $descriptions['requestExample'] ?? '',
+            'methodDescribe' => $descriptions['methodDescribe'] ?? '',
+            'created_time' => time(),
+        ];
+        $this->eellyAcl->addPermission($hashName, $this->serviceName, $permissionData);
+        $requestExample = json_decode($descriptions['requestExample'], true);
+        $returnExample = $descriptions['returnExample'];
+
+        if(!empty($methodParam)){
+            foreach ($methodParam as $paramId => $param) {
                 $requestData[] = [
-                    'param_id'     => $paramId,
-                    'type'         => $param[1] ?? '',
-                    'comment'      => $param[3] ?? '',
+                    'data_type' => 2,
+                    'param_id' => $paramId,
+                    'param_type' => $param['type'],
+                    'param_name' => $param['name'],
+                    'param_example' => isset($requestExample[$paramId]) ? (is_array($requestExample[$paramId]) ? json_encode($requestExample[$paramId]) : $requestExample[$paramId]) : '',
+                    'comment' => $descriptions['paramDescribe'][$paramId] ?? '',
+                    'is_must' => ! $param['hasDefaultVal'],
+                    'created_time' => time()
+                ];
+            }
+            $this->eellyAcl->addPermissionRequest($requestData, $hashName);
+        }
+
+        if(isset($descriptions['returnInfo'])){
+            foreach ($descriptions['returnInfo'] as $info){
+                $dataType = 'return' == $info['type'] ? 1 : 2;
+                $returnData[] = [
+                    'return_type' => $info['returnValue'],
+                    'data_type' => $dataType,
+                    'comment' => $info['returnDescribe'],
+                    'return_example' => 1 == $dataType ? $returnExample : $info['returnValue'],
                     'created_time' => time(),
                 ];
             }
+            $this->eellyAcl->addPermissionReturn($returnData, $hashName);
         }
-        $this->eellyAcl->addPermissionRequest($requestData, $hashName);
-
-        $returnData = [
-            'dto_name'       => $descriptions['return']['dto'] ?? '',
-            'return_example' => $descriptions['return']['example'] ?? '',
-            'created_time'   => time(),
-        ];
-        $this->eellyAcl->addPermissionReturn($returnData, $hashName);
     }
 
     /**

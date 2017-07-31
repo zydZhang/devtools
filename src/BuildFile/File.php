@@ -224,4 +224,27 @@ EOF;
 
         return $interface;
     }
+
+    /**
+     * 返回单例code
+     *
+     * @return string
+     */
+    protected function getInstanceCode(): string
+    {
+        return <<<EOF
+    /**
+     * @return self
+     */
+    public static function getInstance() :self
+    {
+        static \$instance;
+        if (null === \$instance) {
+            \$instance = new self();
+        }
+
+        return \$instance;
+    }
+EOF;
+    }
 }
