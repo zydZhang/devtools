@@ -236,7 +236,7 @@ EOF;
     /**
      * @return self
      */
-    public static function getInstance() :self
+    public static function getInstance(): self
     {
         static \$instance;
         if (null === \$instance) {
@@ -246,5 +246,26 @@ EOF;
         return \$instance;
     }
 EOF;
+    }
+
+    /**
+     * 简易的数组转化为字符串
+     *
+     * @param array $arr
+     * @return string
+     */
+    protected function arrayConvertsString(array $arr): string
+    {
+        if(empty($arr)){
+            return '[]';
+        }
+
+        $str = '[';
+        foreach ($arr as $val){
+            $str .= (is_array($val) ? $this->arrayConvertsString($val) : $val) . ', ';
+        }
+
+        $str = rtrim($str, ', ') . ']';
+        return $str;
     }
 }

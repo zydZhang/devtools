@@ -382,7 +382,7 @@ EOF;
         foreach ($params as $param) {
             !empty($param['type']) && $str .= $this->checkParamType($param['type']).' ';
             $str .= '$'.$param['name'];
-            $param['hasDefaultVal'] && $str .= ' = '.$param['defaultVal'];
+            $param['hasDefaultVal'] && $str .= ' = '. (is_array($param['defaultVal']) ? $this->arrayConvertsString($param['defaultVal']): $param['defaultVal']);
             $str .= ',';
         }
 
@@ -575,7 +575,7 @@ EOF;
     /**
      * 生成service内的interface文件
      */
-    private function buildInterface()
+    private function buildInterface(): void
     {
         $statement = $this->di->getDb()->query('SHOW TABLES');
         $tables = $statement->fetchAll(Db::FETCH_COLUMN);
@@ -596,12 +596,121 @@ EOF;
             if(file_exists($className)){
                 continue;
             }
-
+            $dtoNamespace = 'Eelly\SDK\\' . ucfirst($this->moduleName) . '\Service\Index\DTO\\' . $interface .'DTO';
+            $useNamespace = $this->getUseNamespace([$dtoNamespace]);
+            $classBody = $this->getInterfaceInitializeCode($interface);
             $namespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Service';
             $className = $this->getInterfaceName($className);
             $namespace = $this->getNamespace($namespace);
 
-            file_put_contents($classPath, sprintf($templates, $namespace, '', $className, '', ''));
+            file_put_contents($classPath, sprintf($templates, $namespace, $useNamespace, $className, '', $classBody));
         }
+    }
+
+    /**
+     * 获取interface初始化的code
+     *
+     * @param string $interfaceName
+     * @return string
+     */
+    private function getInterfaceInitializeCode(string $interfaceName): string
+    {
+        $getMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+            ],
+            'return' => [
+                'type' => '{InterfaceName}DTO',
+            ],
+        ];
+        $addMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'array', 'name' => 'data'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $updateMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+                ['type' => 'array', 'name' => 'data'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $deleteMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $listPageMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'array', 'name' => 'condition', 'defaultValue' => '[]'],
+                ['type' => 'int', 'name' => 'limit', 'defaultValue' => '10'],
+                ['type' => 'int', 'name' => 'currentPage', 'defaultValue' => '1'],
+            ],
+            'return' => [
+                'type' => 'array',
+            ],
+        ];
+        $methodArr = [
+            'get{InterfaceName}' => $getMethod,
+            'add{InterfaceName}' => $addMethod,
+            'update{InterfaceName}' => $updateMethod,
+            'delete{InterfaceName}' => $deleteMethod,
+            'list{InterfaceName}Page' => $listPageMethod,
+        ];
+
+        $methodDescribe = <<<EOF
+    /**
+     *
+     * @author eellytools<localhost.shell@gmail.com>
+     */\n
+EOF;
+        $initializeCode = '';
+        foreach($methodArr as $methodName => $methodInfo){
+            $qualifier = $methodInfo['qualifier'];
+            $returnType = str_replace('{InterfaceName}', $interfaceName, $methodInfo['return']['type']);
+            $params = $this->getInterfaceInitializeParams($interfaceName, $methodInfo['params']);
+
+            $initializeCode .= $methodDescribe;
+            $methodName = str_replace('{InterfaceName}', $interfaceName, $methodName);
+            $methodStr = <<<EOF
+    $qualifier function $methodName($params): $returnType;\n\n
+EOF;
+            $initializeCode .= $methodStr;
+        }
+
+        return $initializeCode;
+    }
+
+    /**
+     * 获取interface初始化code内的参数
+     *
+     * @param string $interfaceName
+     * @param array $params
+     * @return string
+     */
+    private function getInterfaceInitializeParams(string $interfaceName, array $params): string
+    {
+        if(empty($params)){
+            return '';
+        }
+        $paramStr = '';
+        foreach($params as $param){
+            $paramStr .= $param['type'] . ' $' . str_replace('{InterfaceName}', $interfaceName, $param['name']) . (isset($param['defaultValue']) ? ' = ' . $param['defaultValue'] : '') . ', ';
+        }
+
+        return rtrim($paramStr, ', ');
     }
 }
