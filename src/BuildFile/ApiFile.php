@@ -596,7 +596,7 @@ EOF;
             if(file_exists($className)){
                 continue;
             }
-            $dtoNamespace = 'Eelly\SDK\\' . ucfirst($this->moduleName) . '\Service\Index\DTO\\' . $interface .'DTO';
+            $dtoNamespace = 'Eelly\DTO\\' . $interface .'DTO';
             $useNamespace = $this->getUseNamespace([$dtoNamespace]);
             $classBody = $this->getInterfaceInitializeCode($interface);
             $namespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Service';
