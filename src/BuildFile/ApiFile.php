@@ -304,7 +304,7 @@ class ApiFile extends File
             if ($isLogic) {
                 $hashName = strtolower(str_replace(['\\', 'Logic/', 'Logic'], ['/'], $this->serviceName)).'/'.$method->getName();
                 $descriptions = !empty($methodDoc) ? $this->getMethodDescription($methodDoc) : [];
-                //$this->addPermission($hashName, $methodParam, $descriptions);
+                $this->addPermission($hashName, $methodParam, $descriptions);
             }
 
             $methodBuild[] = [
