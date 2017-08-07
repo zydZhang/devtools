@@ -38,6 +38,8 @@ class ConfigFile extends File
         'fastdfs.php',
         'mongodb.php',
         'mysql.php',
+        'amqp.php',
+        'oauth2Client.php',
     ];
 
     /**

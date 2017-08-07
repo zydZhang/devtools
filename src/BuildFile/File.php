@@ -208,4 +208,64 @@ EOF;
         }
         rmdir($pathName);
     }
+
+    /**
+     * 获取接口名.
+     *
+     * @param string $interfaceName
+     * @param string $extends
+     *
+     * @return string
+     */
+    protected function getInterfaceName(string $interfaceName, string $extends = ''): string
+    {
+        $interface = 'interface '.$interfaceName;
+        !empty($extends) && $interface.= ' extends '.$extends;
+
+        return $interface;
+    }
+
+    /**
+     * 返回单例code
+     *
+     * @return string
+     */
+    protected function getInstanceCode(): string
+    {
+        return <<<EOF
+    /**
+     * @return self
+     */
+    public static function getInstance(): self
+    {
+        static \$instance;
+        if (null === \$instance) {
+            \$instance = new self();
+        }
+
+        return \$instance;
+    }
+EOF;
+    }
+
+    /**
+     * 简易的数组转化为字符串
+     *
+     * @param array $arr
+     * @return string
+     */
+    protected function arrayConvertsString(array $arr): string
+    {
+        if(empty($arr)){
+            return '[]';
+        }
+
+        $str = '[';
+        foreach ($arr as $val){
+            $str .= (is_array($val) ? $this->arrayConvertsString($val) : $val) . ', ';
+        }
+
+        $str = rtrim($str, ', ') . ']';
+        return $str;
+    }
 }

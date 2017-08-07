@@ -49,7 +49,8 @@ class LogicFile extends File
     public function run(array $dirInfo, array $tables): void
     {
         $this->setDirInfo($dirInfo);
-        $this->buildLogic($tables);
+        $logics = $this->processLogicName($tables);
+        $this->buildLogic($logics);
     }
 
     /**
@@ -66,13 +67,13 @@ class LogicFile extends File
     /**
      * 生成logic.
      *
-     * @param array $tables
+     * @param array $logics
      */
-    private function buildLogic(array $tables): void
+    private function buildLogic(array $logics): void
     {
-        foreach ($tables as $table) {
+        foreach ($logics as $logic) {
             $fileName = $aggregateRoot = '';
-            $aggregateArr = explode('_', $table);
+            $aggregateArr = explode('_', $logic);
             $aggregate = array_reduce($aggregateArr, function ($str, $val) {
                 return $str .= ucfirst($val);
             });
@@ -160,5 +161,25 @@ class LogicFile extends File
         $useNamespace = $this->getUseNamespace($useNamespace);
 
         return sprintf($templates, $namespace, $useNamespace, $className, '', '');
+    }
+
+    /**
+     * 转换logic文件名称
+     *
+     * @param array $tables
+     * @return array
+     */
+    private function processLogicName(array $tables): array
+    {
+        if(empty($tables)){
+            return [];
+        }
+
+        $logics = [];
+        foreach($tables as $table){
+            $logics[] = substr_count($table, '_') ? ltrim(strchr($table, '_'), '_') : $table;
+        }
+
+        return $logics;
     }
 }

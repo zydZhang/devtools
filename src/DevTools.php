@@ -108,10 +108,10 @@ EOF;
     {
         $apiInfo = $params[0] ?? '';
         $action = $params[1] ?? '';
-        if (false === strpos($apiInfo, '\\') || !in_array($action, ['update'])) {
+        if (false === strpos($apiInfo, ':') || !in_array($action, ['update'])) {
             exit('参数有误请查看帮助文档===>eellyTools help');
         }
-        list($moduleName, $apiName) = explode('\\', $apiInfo);
+        list($moduleName, $apiName) = explode(':', $apiInfo);
         (new ApiFile($this->di))->setModuleName($moduleName)->setDir()->setNamespace()->buildApiFileInCli($apiName);
     }
 
@@ -123,7 +123,7 @@ eellyTools [action] [params]\n
     build all --构建配置文件(devtools.php)内的所有模块
     build user --构建user模块
 
-    api user\\\index  update --新增/修改api
+    api user:index  update --新增/修改api
 
 ****************************************************
 EOF;

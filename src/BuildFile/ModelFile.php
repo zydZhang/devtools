@@ -136,8 +136,8 @@ class ModelFile extends File
         ];
         $fields = implode(',', array_column($properties, 'COLUMN_NAME'));
         $fieldsValue = '['.PHP_EOL.str_repeat(' ', 8)."'base' => '{$fields}',".PHP_EOL.str_repeat(' ', 4).']';
-        $p['filedScope'] = [
-            'type'      => 'general',
+        $p['FIELD_SCOPE'] = [
+            'type'      => 'const',
             'qualifier' => 'protected',
             'value'     => $fieldsValue,
             'tips'      => $this->getPropertiesCommentary('字段空间', 'array'),

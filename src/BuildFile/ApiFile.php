@@ -16,6 +16,7 @@ use Eelly\Acl\Adapter\Database;
 use Eelly\DevTools\Traits\SDKDirTrait;
 use Phalcon\Db\Adapter\Pdo\Mysql;
 use Phalcon\DiInterface;
+use Phalcon\Db;
 
 /**
  * Api生成类.
@@ -215,9 +216,9 @@ class ApiFile extends File
     private function buildApiFile(): void
     {
         if (!is_dir($this->serviceDir)) {
-            echo $this->serviceDir.'目录不存在,生成Api失败...'.PHP_EOL;
-
-            return;
+            mkdir($this->serviceDir, 0755, true);
+            echo $this->serviceDir.'目录不存在,已自动生成service...'.PHP_EOL;
+            $this->buildInterface();
         }
 
         !is_dir($this->apiDir) && mkdir($this->apiDir, 0755, true);
@@ -270,7 +271,12 @@ class ApiFile extends File
         $this->initUseNamespace('Api');
         $interfaceName = $this->serviceNamespace.$apiImplements;
         $this->setUseNamespace($interfaceName);
-        $interfaceReflection = new \ReflectionClass($interfaceName);
+        try{
+            $interfaceReflection = new \ReflectionClass($interfaceName);
+        }catch (\ReflectionException $e){
+            exit($e->getMessage() . '，请确保Service内的Interface存在');
+        }
+
         $methods = $interfaceReflection->getMethods();
         // 获取api需生成的方法code
         $classBody = $this->getApiMethodCode($methods, $isLogic);
@@ -294,19 +300,19 @@ class ApiFile extends File
         $methodBuild = [];
         foreach ($methods as $method) {
             $methodDoc = $method->getDocComment();
+            $methodParam = $this->getMethodParams($method->getParameters());
             if ($isLogic) {
                 $hashName = strtolower(str_replace(['\\', 'Logic/', 'Logic'], ['/'], $this->serviceName)).'/'.$method->getName();
                 $descriptions = !empty($methodDoc) ? $this->getMethodDescription($methodDoc) : [];
-                $this->addPermission($hashName, $descriptions);
-                //$this->eellyAcl->addPermission($descriptions['method'], $hashName, $this->serviceName);
+                $this->addPermission($hashName, $methodParam, $descriptions);
             }
 
             $methodBuild[] = [
                 'document' => $methodDoc,
                 'modifier' => \Reflection::getModifierNames($method->getModifiers())[1],
-                'name'     => $method->getName(),
-                'params'   => $this->getMethodParams($method->getParameters()),
-                'return'   => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : '',
+                'name' => $method->getName(),
+                'params' => $methodParam,
+                'return' => ($method->getReturnType() instanceof \ReflectionType) ? $method->getReturnType()->getName() : ''
             ];
         }
 
@@ -359,7 +365,7 @@ class ApiFile extends File
     }\n\n
 EOF;
         }
-
+        !$isLogic && $str .= $this->getInstanceCode();
         return $str;
     }
 
@@ -376,7 +382,7 @@ EOF;
         foreach ($params as $param) {
             !empty($param['type']) && $str .= $this->checkParamType($param['type']).' ';
             $str .= '$'.$param['name'];
-            $param['hasDefaultVal'] && $str .= ' = '.$param['defaultVal'];
+            $param['hasDefaultVal'] && $str .= ' = '. (is_array($param['defaultVal']) ? $this->arrayConvertsString($param['defaultVal']): $param['defaultVal']);
             $str .= ',';
         }
 
@@ -486,24 +492,31 @@ EOF;
     private function getMethodDescription(string $docComment): array
     {
         if (empty($docComment)) {
-            return '';
+            return [];
         }
-        $methodDescription = $paramDescription = $paramArr = $returnArr = [];
-        $description = strstr($docComment, '.', true);
-        $methodDescription['method'] = !empty($description) ? strtr($description, ['/' => '', PHP_EOL => '', '*' => '', ' ' => '']) : '';
-
-        preg_match_all('/@param.*/', $docComment, $paramArr);
-        !empty($paramArr[0]) && array_walk($paramArr[0], function ($val) use (&$paramDescription) {
-            $paramDescription[] = explode(' ', $val);
-        });
-        $methodDescription['param'] = $paramDescription;
-
-        preg_match('/@return\s+.*/', $docComment, $returnArr);
-        isset($returnArr[0]) && $methodDescription['return']['dto'] = strstr($returnArr[0], ' ');
-
-        preg_match('/@returnExample\((.*)\)/', $docComment, $returnArr);
-        $methodDescription['return']['example'] = $returnArr[1] ?? '';
-
+        // 方法名和方法描述
+        $methodDescription = $paramDescription = $requestExample = $returnExample = [];
+        preg_match('/[\/*\s]+([^@\n]*)[*\s]+([^@\n]*)/', $docComment, $description);
+        $methodDescription['methodName'] = $description[1] ?? '';
+        $methodDescription['methodDescribe'] = $description[2] ?? '';
+        // 参数描述
+        preg_match_all('/@param.*\$[\w]*\s+([^\s\*]*)\n/U', $docComment, $paramArr);
+        $methodDescription['paramDescribe'] = $paramArr[1] ?? [];
+        // 请求参数示例
+        preg_match('/@requestExample\((.*)\)/', $docComment, $requestExample);
+        $methodDescription['requestExample'] = $requestExample[1] ?? '';
+        // 返回参数示例
+        preg_match('/@returnExample\((.*)\)/', $docComment, $returnExample);
+        $methodDescription['returnExample'] = $returnExample[1] ?? '';
+        // 返回参数和异常类型、描述
+        preg_match_all('/@(return|throws)\s+([^\s]+)\s+([^\s\]*\/]*)/', $docComment, $returnDescription);
+        foreach($returnDescription[1] as $key => $val){
+            $methodDescription['returnInfo'][] = [
+                'type' => $val,
+                'returnValue' => $returnDescription[2][$key] ?? '',
+                'returnDescribe' => $returnDescription[3][$key] ?? '',
+            ];
+        }
         return $methodDescription;
     }
 
@@ -511,30 +524,193 @@ EOF;
      * 添加到权限表.
      *
      * @param string $hashName
+     * @param array $methodParam
      * @param array  $descriptions
      */
-    private function addPermission(string $hashName, array $descriptions): void
+    private function addPermission(string $hashName, array $methodParam, array $descriptions): void
     {
-        $requestData = $returnData = [];
-        $this->eellyAcl->addPermission($descriptions['method'] ?? '', $hashName, $this->serviceName);
+        $requestData = $returnData = $permissionData = [];
 
-        if (isset($descriptions['param'])) {
-            foreach ($descriptions['param'] as $paramId => $param) {
+        $permissionData = [
+            'methodName' => $descriptions['methodName'] ?? '',
+            'requestExample' => $descriptions['requestExample'] ?? '',
+            'methodDescribe' => $descriptions['methodDescribe'] ?? '',
+            'created_time' => time(),
+        ];
+        $this->eellyAcl->addPermission($hashName, $this->serviceName, $permissionData);
+        $requestExample = json_decode($descriptions['requestExample'], true);
+        $returnExample = $descriptions['returnExample'];
+
+        if(!empty($methodParam)){
+            foreach ($methodParam as $paramId => $param) {
                 $requestData[] = [
-                    'param_id'     => $paramId,
-                    'type'         => $param[1] ?? '',
-                    'comment'      => $param[3] ?? '',
+                    'data_type' => 2,
+                    'param_id' => $paramId,
+                    'param_type' => $param['type'],
+                    'param_name' => $param['name'],
+                    'param_example' => isset($requestExample[$paramId]) ? (is_array($requestExample[$paramId]) ? json_encode($requestExample[$paramId]) : $requestExample[$paramId]) : '',
+                    'comment' => $descriptions['paramDescribe'][$paramId] ?? '',
+                    'is_must' => ! $param['hasDefaultVal'],
+                    'created_time' => time()
+                ];
+            }
+            $this->eellyAcl->addPermissionRequest($requestData, $hashName);
+        }
+
+        if(isset($descriptions['returnInfo'])){
+            foreach ($descriptions['returnInfo'] as $info){
+                $dataType = 'return' == $info['type'] ? 1 : 2;
+                $returnData[] = [
+                    'return_type' => $info['returnValue'],
+                    'data_type' => $dataType,
+                    'comment' => $info['returnDescribe'],
+                    'return_example' => 1 == $dataType ? $returnExample : $info['returnValue'],
                     'created_time' => time(),
                 ];
             }
+            $this->eellyAcl->addPermissionReturn($returnData, $hashName);
         }
-        $this->eellyAcl->addPermissionRequest($requestData, $hashName);
+    }
 
-        $returnData = [
-            'dto_name'       => $descriptions['return']['dto'] ?? '',
-            'return_example' => $descriptions['return']['example'] ?? '',
-            'created_time'   => time(),
+    /**
+     * 生成service内的interface文件
+     */
+    private function buildInterface(): void
+    {
+        $statement = $this->di->getDb()->query('SHOW TABLES');
+        $tables = $statement->fetchAll(Db::FETCH_COLUMN);
+        $interfaces = [];
+        // 转换interface名称
+        foreach($tables as $table){
+            $interfaceName = substr_count($table, '_') ? ltrim(strchr($table, '_'), '_') : $table;
+            $interfaceNameArr = explode('_', $interfaceName);
+            $interfaces[] = array_reduce($interfaceNameArr, function ($str, $val) {
+                return $str .= ucfirst($val);
+            });
+        }
+
+        $templates = $this->getTemplateFile('Base');
+        foreach ($interfaces as $interface){
+            $className = $interface . 'Interface';
+            $classPath = $this->serviceDir . '/' . $className . $this->fileExt;
+            if(file_exists($className)){
+                continue;
+            }
+            $dtoNamespace = 'Eelly\DTO\\' . $interface .'DTO';
+            $useNamespace = $this->getUseNamespace([$dtoNamespace]);
+            $classBody = $this->getInterfaceInitializeCode($interface);
+            $namespace = $this->sdkNamespace . ucfirst($this->moduleName) . '\\Service';
+            $className = $this->getInterfaceName($className);
+            $namespace = $this->getNamespace($namespace);
+
+            file_put_contents($classPath, sprintf($templates, $namespace, $useNamespace, $className, '', $classBody));
+        }
+    }
+
+    /**
+     * 获取interface初始化的code
+     *
+     * @param string $interfaceName
+     * @return string
+     */
+    private function getInterfaceInitializeCode(string $interfaceName): string
+    {
+        $getMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+            ],
+            'return' => [
+                'type' => '{InterfaceName}DTO',
+            ],
         ];
-        $this->eellyAcl->addPermissionReturn($returnData, $hashName);
+        $addMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'array', 'name' => 'data'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $updateMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+                ['type' => 'array', 'name' => 'data'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $deleteMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'int', 'name' => '{InterfaceName}Id'],
+            ],
+            'return' => [
+                'type' => 'bool',
+            ],
+        ];
+        $listPageMethod = [
+            'qualifier' => 'public',
+            'params' => [
+                ['type' => 'array', 'name' => 'condition', 'defaultValue' => '[]'],
+                ['type' => 'int', 'name' => 'limit', 'defaultValue' => '10'],
+                ['type' => 'int', 'name' => 'currentPage', 'defaultValue' => '1'],
+            ],
+            'return' => [
+                'type' => 'array',
+            ],
+        ];
+        $methodArr = [
+            'get{InterfaceName}' => $getMethod,
+            'add{InterfaceName}' => $addMethod,
+            'update{InterfaceName}' => $updateMethod,
+            'delete{InterfaceName}' => $deleteMethod,
+            'list{InterfaceName}Page' => $listPageMethod,
+        ];
+
+        $methodDescribe = <<<EOF
+    /**
+     *
+     * @author eellytools<localhost.shell@gmail.com>
+     */\n
+EOF;
+        $initializeCode = '';
+        foreach($methodArr as $methodName => $methodInfo){
+            $qualifier = $methodInfo['qualifier'];
+            $returnType = str_replace('{InterfaceName}', $interfaceName, $methodInfo['return']['type']);
+            $params = $this->getInterfaceInitializeParams($interfaceName, $methodInfo['params']);
+
+            $initializeCode .= $methodDescribe;
+            $methodName = str_replace('{InterfaceName}', $interfaceName, $methodName);
+            $methodStr = <<<EOF
+    $qualifier function $methodName($params): $returnType;\n\n
+EOF;
+            $initializeCode .= $methodStr;
+        }
+
+        return $initializeCode;
+    }
+
+    /**
+     * 获取interface初始化code内的参数
+     *
+     * @param string $interfaceName
+     * @param array $params
+     * @return string
+     */
+    private function getInterfaceInitializeParams(string $interfaceName, array $params): string
+    {
+        if(empty($params)){
+            return '';
+        }
+        $paramStr = '';
+        foreach($params as $param){
+            $paramStr .= $param['type'] . ' $' . str_replace('{InterfaceName}', $interfaceName, $param['name']) . (isset($param['defaultValue']) ? ' = ' . $param['defaultValue'] : '') . ', ';
+        }
+
+        return rtrim($paramStr, ', ');
     }
 }
