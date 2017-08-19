@@ -59,8 +59,9 @@ class DevTools extends Injectable
     示例:
     eellyTools build all
 3、报警吧
-*************************************
+*************************************\n
 EOF;
+            $this->helpAction();
             exit;
         }
     }
@@ -75,7 +76,7 @@ EOF;
         $originalTime = $startTime = microtime(true);
         $startDate = date('Y-m-d H:i:s');
         echo <<<EOF
-****************************************************
+*************************************
 build模式已开启===>开始时间:({$startDate})\n\n
 EOF;
         $modules = 'all' === $params[0] ? $this->config->devModules->toArray() : $params;
@@ -94,7 +95,7 @@ EOF;
         $totlaTime = sprintf('%0.3f', $endTime - $originalTime);
         echo <<<EOF
 build模式完成===>总耗时({$totlaTime}s)\n
-****************************************************
+*************************************
 EOF;
         exit;
     }
@@ -109,7 +110,7 @@ EOF;
         $apiInfo = $params[0] ?? '';
         $action = $params[1] ?? '';
         if (false === strpos($apiInfo, ':') || !in_array($action, ['update'])) {
-            exit('参数有误请查看帮助文档===>eellyTools help');
+            exit('参数有误请查看帮助文档===>vendor/bin/eellyTools help');
         }
         list($moduleName, $apiName) = explode(':', $apiInfo);
         (new ApiFile($this->di))->setModuleName($moduleName)->setDir()->setNamespace()->buildApiFileInCli($apiName);
@@ -118,14 +119,16 @@ EOF;
     public function helpAction(): void
     {
         echo <<<EOF
-****************************************************
+
+help document
+*************************************
 eellyTools [action] [params]\n
     build all --构建配置文件(devtools.php)内的所有模块
     build user --构建user模块
 
     api user:index  update --新增/修改api
 
-****************************************************
+*************************************
 EOF;
     }
 }

@@ -382,11 +382,11 @@ EOF;
         foreach ($params as $param) {
             !empty($param['type']) && $str .= $this->checkParamType($param['type']).' ';
             $str .= '$'.$param['name'];
-            $param['hasDefaultVal'] && $str .= ' = '. (is_array($param['defaultVal']) ? $this->arrayConvertsString($param['defaultVal']): $param['defaultVal']);
-            $str .= ',';
+            $param['hasDefaultVal'] && $str .= ' = '. (is_array($param['defaultVal']) ? $this->arrayConvertsString($param['defaultVal']): $this->valueConvertsString($param['defaultVal']));
+            $str .= ', ';
         }
 
-        return rtrim($str, ',').')';
+        return rtrim($str, ', ').')';
     }
 
     /**
@@ -530,17 +530,18 @@ EOF;
     private function addPermission(string $hashName, array $methodParam, array $descriptions): void
     {
         $requestData = $returnData = $permissionData = [];
-
+        $isLogin = $this->checkPermissionIsLogin($methodParam);
         $permissionData = [
             'methodName' => $descriptions['methodName'] ?? '',
             'requestExample' => $descriptions['requestExample'] ?? '',
             'methodDescribe' => $descriptions['methodDescribe'] ?? '',
             'created_time' => time(),
+            'isLogin' => (int)$isLogin,
         ];
         $this->eellyAcl->addPermission($hashName, $this->serviceName, $permissionData);
         $requestExample = json_decode($descriptions['requestExample'], true);
         $returnExample = $descriptions['returnExample'];
-
+        $paramExample = $this->getParamExample($methodParam, $requestExample);
         if(!empty($methodParam)){
             foreach ($methodParam as $paramId => $param) {
                 $requestData[] = [
@@ -548,9 +549,9 @@ EOF;
                     'param_id' => $paramId,
                     'param_type' => $param['type'],
                     'param_name' => $param['name'],
-                    'param_example' => isset($requestExample[$paramId]) ? (is_array($requestExample[$paramId]) ? json_encode($requestExample[$paramId]) : $requestExample[$paramId]) : '',
+                    'param_example' => $paramExample[$paramId] ?? '',
                     'comment' => $descriptions['paramDescribe'][$paramId] ?? '',
-                    'is_must' => ! $param['hasDefaultVal'],
+                    'is_must' => (int)! $param['hasDefaultVal'],
                     'created_time' => time()
                 ];
             }
@@ -712,5 +713,46 @@ EOF;
         }
 
         return rtrim($paramStr, ', ');
+    }
+
+    /**
+     * 获取参数的示例值
+     *
+     * @param array $methodParam
+     * @param array $requestExample
+     * @return array
+     */
+    private function getParamExample(array $methodParam, array $requestExample): array
+    {
+        if(empty($methodParam) || empty($requestExample)){
+            return [];
+        }
+        $paramExample = [];
+        foreach($methodParam as $param){
+            $example = $requestExample[$param['position']] ?? ($requestExample[$param['name']] ?? '');
+            is_array($example) && $example = json_encode($example);
+            $paramExample[] = $example;
+        }
+
+        return $paramExample;
+    }
+
+    /**
+     * 判断permission是否需要登录
+     *
+     * @param array $methodParam
+     * @return bool
+     */
+    private function checkPermissionIsLogin(array $methodParam): bool
+    {
+        if(empty($methodParam)){
+            return false;
+        }
+        $loginMark = [
+            'Eelly\\DTO\\UidDTO',
+        ];
+        $paramType = array_column($methodParam, 'type');
+
+        return (bool)array_intersect($loginMark, $paramType);
     }
 }

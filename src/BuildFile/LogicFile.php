@@ -41,13 +41,22 @@ class LogicFile extends File
     protected $extName = 'Logic';
 
     /**
+     * 模块名称
+     *
+     * @var string
+     */
+    protected $moduleName = '';
+
+    /**
      * logic构建.
      *
+     * @param string $moduleName
      * @param array $dirInfo
      * @param array $tables
      */
-    public function run(array $dirInfo, array $tables): void
+    public function run(string $moduleName, array $dirInfo, array $tables): void
     {
+        $this->moduleName = $moduleName;
         $this->setDirInfo($dirInfo);
         $logics = $this->processLogicName($tables);
         $this->buildLogic($logics);
@@ -78,12 +87,13 @@ class LogicFile extends File
                 return $str .= ucfirst($val);
             });
 
-            if (3 <= count($aggregateArr)) {
-                $aggregateRoot = array_reduce(array_slice($aggregateArr, 0, 2), function ($str, $val) {
-                    return $str .= ucfirst($val);
-                });
-                $this->buildAggregateDir($aggregateRoot);
-            }
+//             TODO 去除Aggregate层
+//             if (3 <= count($aggregateArr)) {
+//                 $aggregateRoot = array_reduce(array_slice($aggregateArr, 0, 2), function ($str, $val) {
+//                     return $str .= ucfirst($val);
+//                 });
+//                 $this->buildAggregateDir($aggregateRoot);
+//             }
             $this->buildLogicFile($aggregate, $aggregateRoot);
         }
     }
@@ -127,12 +137,14 @@ class LogicFile extends File
     {
         $templates = $this->getTemplateFile('Base');
         $namespace = $this->logicNamespace;
+        $implementName = $aggregate . 'Interface';
         $useNamespace = [
             'Eelly\\Mvc\\LogicController',
+            'Eelly\\SDK\\' . ucfirst($this->moduleName) . '\\Service\\' . $implementName,
         ];
         $className = $aggregate.$this->extName;
         $extendsName = 'LogicController';
-        $className = $this->getClassName($className, $extendsName);
+        $className = $this->getClassName($className, $extendsName, [$implementName]);
         $namespace = $this->getNamespace($namespace);
         $useNamespace = $this->getUseNamespace($useNamespace);
 

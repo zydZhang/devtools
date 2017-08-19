@@ -196,6 +196,9 @@ class ModuleFile extends File
             'Model.Mysql',
             'Model.MongoDB',
             'Logic',
+            'Validation',
+            'Repository',
+            'EventListener',
         ];
 
         foreach ($child as $dirName) {
