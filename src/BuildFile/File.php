@@ -268,4 +268,27 @@ EOF;
         $str = rtrim($str, ', ') . ']';
         return $str;
     }
+
+    /**
+     * 值转换为字符串
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function valueConvertsString($value)
+    {
+        switch (true){
+            case is_null($value):
+                $value = 'null';
+                break;
+            case is_bool($value):
+                $value = true ? 'true' : 'false';
+                break;
+            case is_string($value):
+                $value = "'" . $value . "'";
+                break;
+        }
+
+        return $value;
+    }
 }

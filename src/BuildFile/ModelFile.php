@@ -76,7 +76,7 @@ class ModelFile extends File
         if (empty($tables)) {
             echo $moduleName.'模块的表不存在,生成Model失败'.PHP_EOL;
         } else {
-            (new LogicFile($this->di))->run($dirInfo['Logic'], $tables);
+            $config->beforeLogic && (new LogicFile($this->di))->run($moduleName, $dirInfo['Logic'], $tables);
             foreach ($tables as $table) {
                 $modelName = $this->getModelNameBytableName($table);
                 $filePath = $this->modelDir.'/'.$modelName.$this->fileExt;
