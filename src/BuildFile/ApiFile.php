@@ -539,7 +539,7 @@ EOF;
             'isLogin' => (int)$isLogin,
         ];
         $this->eellyAcl->addPermission($hashName, $this->serviceName, $permissionData);
-        $requestExample = json_decode($descriptions['requestExample'], true);
+        $requestExample = json_decode($descriptions['requestExample'], true) ?: [];
         $returnExample = $descriptions['returnExample'];
         $paramExample = $this->getParamExample($methodParam, $requestExample);
         if(!empty($methodParam)){
@@ -709,7 +709,7 @@ EOF;
         }
         $paramStr = '';
         foreach($params as $param){
-            $paramStr .= $param['type'] . ' $' . str_replace('{InterfaceName}', $interfaceName, $param['name']) . (isset($param['defaultValue']) ? ' = ' . $param['defaultValue'] : '') . ', ';
+            $paramStr .= $param['type'] . ' $' . str_replace('{InterfaceName}', lcfirst($interfaceName), $param['name']) . (isset($param['defaultValue']) ? ' = ' . $param['defaultValue'] : '') . ', ';
         }
 
         return rtrim($paramStr, ', ');
