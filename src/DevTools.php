@@ -27,12 +27,12 @@ class DevTools extends Injectable
 
     public function run(): void
     {
-        if (\Eelly\Application\ApplicationConst::ENV_PRODUCTION == $this->config->env && $this->config->mysqlMode) {
+        if (\Eelly\Application\ApplicationConst::ENV_TEST == $this->config->env && $this->config->mysqlMode) {
             $eventsManager = $this->di->getEventsManager();
             $eventsManager->attach('db', new DbListerner());
         }
 
-        if ('cli' === PHP_SAPI && $this->config->buildMode) {
+        if (\Eelly\Application\ApplicationConst::ENV_DEVELOPMENT == $this->config->env && 'cli' === PHP_SAPI && $this->config->buildMode) {
             $this->cliTools();
         }
     }
