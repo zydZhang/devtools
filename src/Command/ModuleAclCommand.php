@@ -41,7 +41,7 @@ class ModuleAclCommand extends BaseCommand
      {
          $helpStr = <<<EOT
 module all 更新所有的模块
-module goods 更新goodsmok
+module goods 更新goods模块
 EOT;
          $this->setName('module')
             ->setDescription('新增/更新模块的acl信息')
