@@ -103,6 +103,13 @@ class ApiFile extends File
     protected $serviceName = '';
 
     /**
+     * 当前acl操作的Permission
+     *
+     * @var string
+     */
+    protected $currentPermission = '';
+
+    /**
      * @param DiInterface $di
      */
     public function __construct(DiInterface $di)
@@ -190,8 +197,23 @@ class ApiFile extends File
         $templates = $this->getTemplateFile('Base');
         $apiPath = $this->apiDir.'/'.$this->apiName.$this->fileExt;
         $apiImplements = $this->apiName.'Interface';
-        file_put_contents($apiPath, $this->getApiFileCode($apiImplements, $templates, true));
-        exit($this->apiNamespace.'\\'.$apiName.'更新完成');
+        $apiFileCode = $this->getApiFileCode($apiImplements, $templates, false, true);
+        !file_exists($apiPath) && file_put_contents($apiPath, $apiFileCode);
+        $outStr = 'API======>' . $this->apiNamespace.'\\' . $apiName . '更新完成' . PHP_EOL;
+        echo $outStr;
+    }
+
+    /**
+     * 设置当前操作的permissionName
+     *
+     * @param string $permissionName
+     * @return self
+     */
+    public function setCurrentPermission(string $permissionName): self
+    {
+        $this->currentPermission = $permissionName;
+
+        return $this;
     }
 
     /**
@@ -263,10 +285,12 @@ class ApiFile extends File
      *
      * @param string $apiImplements
      * @param string $templates
+     * @param bool $isLogic
+     * @param bool $isCliApi
      *
      * @return string
      */
-    private function getApiFileCode(string $apiImplements, string $templates, bool $isLogic = false): string
+    private function getApiFileCode(string $apiImplements, string $templates, bool $isLogic = false, bool $isCliApi = false): string
     {
         $this->initUseNamespace('Api');
         $interfaceName = $this->serviceNamespace.$apiImplements;
@@ -279,7 +303,7 @@ class ApiFile extends File
 
         $methods = $interfaceReflection->getMethods();
         // 获取api需生成的方法code
-        $classBody = $this->getApiMethodCode($methods, $isLogic);
+        $classBody = $this->getApiMethodCode($methods, $isLogic, $isCliApi);
         $namespace = $this->getNamespace($this->apiNamespace);
         $useNamespace = $this->getUseNamespace($this->useNamespace);
         $className = $this->getClassName($this->apiName, '', [$apiImplements]);
@@ -292,16 +316,19 @@ class ApiFile extends File
      *
      * @param array $methods
      * @param boole $isLogic
+     * @param bool $isCliApi
      *
      * @return string
      */
-    private function getApiMethodCode(array $methods, bool $isLogic = false): string
+    private function getApiMethodCode(array $methods, bool $isLogic = false, bool $isCliApi = false): string
     {
         $methodBuild = [];
         foreach ($methods as $method) {
             $methodDoc = $method->getDocComment();
             $methodParam = $this->getMethodParams($method->getParameters());
-            if ($isLogic) {
+            // 在命令行下单独操作Permission时仅对当前操作的这个Permission进行数据库操作
+            $isApi = $isCliApi && ('all' === $this->currentPermission ? true : $this->currentPermission === strtolower($method->getName()));
+            if ($isLogic || $isApi) {
                 $hashName = strtolower(str_replace(['\\', 'Logic/', 'Logic'], ['/'], $this->serviceName)).'/'.$method->getName();
                 $descriptions = !empty($methodDoc) ? $this->getMethodDescription($methodDoc) : [];
                 $this->addPermission($hashName, $methodParam, $descriptions);
@@ -316,7 +343,7 @@ class ApiFile extends File
             ];
         }
 
-        return $this->getMethodCode($methodBuild, $isLogic);
+        return $this->getMethodCode($methodBuild, $isLogic, $isCliApi);
     }
 
     /**
@@ -347,10 +374,11 @@ class ApiFile extends File
      *
      * @param array $methods
      * @param boole $isLogic
+     * @param bool $isCliApi
      *
      * @return string
      */
-    private function getMethodCode(array $methods, bool $isLogic): string
+    private function getMethodCode(array $methods, bool $isLogic = false, bool $isCliApi = false): string
     {
         $str = '';
         foreach ($methods as $method) {
@@ -500,16 +528,18 @@ EOF;
         $methodDescription['methodName'] = $description[1] ?? '';
         $methodDescription['methodDescribe'] = $description[2] ?? '';
         // 参数描述
-        preg_match_all('/@param.*\$[\w]*\s+([^\s\*]*)\n/U', $docComment, $paramArr);
+        preg_match_all('/@param.*\$[\w]*\s+([^\s][^\n\*]*)\n/U', $docComment, $paramArr);
         $methodDescription['paramDescribe'] = $paramArr[1] ?? [];
         // 请求参数示例
-        preg_match('/@requestExample\((.*)\)/', $docComment, $requestExample);
+        preg_match('/@requestExample\((.*)\)/sU', $docComment, $requestExample);
         $methodDescription['requestExample'] = $requestExample[1] ?? '';
+        $methodDescription['requestExample']= preg_replace(["/\s\*\s/", "/\s/"], '', $methodDescription['requestExample']);
         // 返回参数示例
-        preg_match('/@returnExample\((.*)\)/', $docComment, $returnExample);
+        preg_match('/@returnExample\((.*)\)/sU', $docComment, $returnExample);
         $methodDescription['returnExample'] = $returnExample[1] ?? '';
+        $methodDescription['returnExample']= preg_replace(["/\s\*\s/", "/\s/"], '', $methodDescription['returnExample']);
         // 返回参数和异常类型、描述
-        preg_match_all('/@(return|throws)\s+([^\s]+)\s+([^\s\]*\/]*)/', $docComment, $returnDescription);
+        preg_match_all('/@(return|throws)\s+([^\s]+)\s+([^\s\*]+[^\n]*)\s/', $docComment, $returnDescription);
         foreach($returnDescription[1] as $key => $val){
             $methodDescription['returnInfo'][] = [
                 'type' => $val,
@@ -517,6 +547,7 @@ EOF;
                 'returnDescribe' => $returnDescription[3][$key] ?? '',
             ];
         }
+
         return $methodDescription;
     }
 

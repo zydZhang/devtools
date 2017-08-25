@@ -17,6 +17,7 @@ use Eelly\DevTools\BuildFile\ModuleFile;
 use Eelly\DevTools\Events\DbListerner;
 use Phalcon\Di\Injectable;
 use Phalcon\DiInterface;
+use Symfony\Component\Console\Application;
 
 class DevTools extends Injectable
 {
@@ -45,23 +46,23 @@ class DevTools extends Injectable
         $argv = isset($GLOBALS['argv']) ? array_map('strtolower', $GLOBALS['argv']) : [];
         if (!empty($argv)) {
             $actionName = $argv[0] ?? '';
-            !is_callable([$this, $actionName.'Action']) && exit($actionName.'操作不存在');
+            !is_callable([$this, $actionName.'Action']) && $this->symfonyConsole();
             array_shift($argv);
-            empty($argv) && 'help' !== $actionName && exit('参数不能为空');
+            empty($argv) && 'helps' !== $actionName && exit('参数不能为空');
             call_user_func([$this, $actionName.'Action'], $argv);
         } else {
             echo <<<EOF
 *************************************
 运行失败
 
-1、请检查devtools.php内buildMode是否开启
-2、缺少参数
+1、缺少参数
     示例:
     eellyTools build all
-3、报警吧
+2、报警吧
 *************************************\n
 EOF;
-            $this->helpAction();
+            $this->helpsAction();
+            $this->symfonyConsole();
             exit;
         }
     }
@@ -71,7 +72,7 @@ EOF;
      *
      * @param array $params
      */
-    public function buildAction(array $params): void
+    protected function buildAction(array $params): void
     {
         $originalTime = $startTime = microtime(true);
         $startDate = date('Y-m-d H:i:s');
@@ -105,30 +106,57 @@ EOF;
      *
      * @param array $params
      */
-    public function apiAction(array $params): void
+    protected function apiAction(array $params): void
     {
         $apiInfo = $params[0] ?? '';
-        $action = $params[1] ?? '';
-        if (false === strpos($apiInfo, ':') || !in_array($action, ['update'])) {
-            exit('参数有误请查看帮助文档===>vendor/bin/eellyTools help');
+        $permissionName = $params[1] ?? '';
+        if (false === strpos($apiInfo, ':') || empty($permissionName)) {
+            exit('参数有误请查看帮助文档===>vendor/bin/eellyTools');
         }
+
         list($moduleName, $apiName) = explode(':', $apiInfo);
-        (new ApiFile($this->di))->setModuleName($moduleName)->setDir()->setNamespace()->buildApiFileInCli($apiName);
+        (new ApiFile($this->di))->setModuleName($moduleName)
+            ->setDir()
+            ->setNamespace()
+            ->setCurrentPermission($permissionName)
+            ->buildApiFileInCli($apiName);
     }
 
-    public function helpAction(): void
+    protected function helpsAction(): void
     {
         echo <<<EOF
 
 help document
 *************************************
 eellyTools [action] [params]\n
-    build all --构建配置文件(devtools.php)内的所有模块
+    build all  --构建配置文件(devtools.php)内的所有模块
     build user --构建user模块
 
-    api user:index  update --新增/修改api
+    api user:index  all              --模块名:接口名  新增/修改api下的全部permission
+    api user:index  getUserInfo      --模块名:接口名  新增/修改api下的getUserInfo
 
-*************************************
+*************************************\n
 EOF;
+    }
+
+    /**
+     * 注册运行symfonyConsole
+     *
+     * @throws \Symfony\Component\Console\Exception\RuntimeException
+     * @author wangjiang<wangjiang@eelly.net>
+     * 2017年8月24日
+     */
+    protected function symfonyConsole()
+    {
+        $application = new Application();
+        $registerCommand = $this->config->registerCommand->toArray();
+        if(empty($registerCommand)){
+            throw new \Symfony\Component\Console\Exception\RuntimeException('not found register command');
+        }
+        $registerCommands = array_map(function($command){
+            return $this->di->getShared($command);
+        }, $registerCommand);
+        $application->addCommands($registerCommands);
+        $application->run();
     }
 }
