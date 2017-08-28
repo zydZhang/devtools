@@ -3,4 +3,5 @@
 //$dir = getcwd();
 $dir = strchr(__DIR__, '/vendor', true);
 chdir($dir);
+$GLOBALS['buildMode'] = true;
 require 'var/config/config.php';

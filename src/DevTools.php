@@ -33,7 +33,8 @@ class DevTools extends Injectable
             $eventsManager->attach('db', new DbListerner());
         }
 
-        if (\Eelly\Application\ApplicationConst::ENV_DEVELOPMENT == $this->config->env && 'cli' === PHP_SAPI && $this->config->buildMode) {
+        $buildMode = $GLOBALS['buildMode'] ?? false;
+        if (\Eelly\Application\ApplicationConst::ENV_DEVELOPMENT == $this->config->env && $buildMode) {
             $this->cliTools();
         }
     }
