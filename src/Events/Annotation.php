@@ -8,7 +8,6 @@
 namespace Eelly\DevTools\Events;
 
 use Phalcon\Di\Injectable;
-use Phalcon\Http\Request;
 use Phalcon\Annotations\Adapter\Memory as MemoryAdapter;
 
 class Annotation extends Injectable
@@ -19,6 +18,13 @@ class Annotation extends Injectable
      * @var array 
      */
     private $methodVerifyType = ['param', 'return', 'requestExample', 'returnExample', 'throws', 'author'];
+    
+    /**
+     * 注解检验类型
+     * 
+     * @var array 
+     */
+    private $fittlerMethod = ['__construct'];
     
     /**
      * 配置信息
@@ -66,7 +72,6 @@ class Annotation extends Injectable
     {
         $this->config = $this->di->get("config");
         $this->route = $this->di->get("router");
-        $this->request = $this->di->get("request");
         $this->dirPath = getcwd();
         $this->annotations = new MemoryAdapter();
     }
@@ -92,17 +97,15 @@ class Annotation extends Injectable
      */
     public function setModuleClassName()
     {
-        $match = [];
-        $rule = "#^/([\w0-9\_\-]+)/([\w0-9\.\_]+)(/.*)*$#u";
-        preg_match($rule, $this->request->getURI(), $match);
-        if(empty($match[1]) || empty($match[2])) {
+        $moduleName = $this->route->getModuleName();
+        $controllerName = $this->route->getControllerName();
+        $actionName = $this->route->getActionName();
+        if(empty($controllerName) || empty($actionName)) {
             return '';
         }
-        $moduleName = '/'. ucfirst($match[1].'/Logic/'.ucfirst($match[2]).'Logic');
+        $moduleName = '/'. ucfirst($moduleName.'/Logic/'.ucfirst($controllerName).'Logic');
         $fileName = $this->dirPath.'/src'.$moduleName.'.php';
         if(file_exists($fileName)) {
-            require $fileName;
-            dump($fileName);
             $this->moduleClassName = str_replace('/', '\\', $moduleName);
             $this->reflector = new \ReflectionClass($this->moduleClassName);
         }
@@ -117,19 +120,16 @@ class Annotation extends Injectable
     private function verifyMethod()
     {
         foreach ($this->reflector->getMethods() as $method) {
+            if(in_array($method->name, $this->fittlerMethod)){
+                continue;
+            }
             if ('\\'.$method->class == $this->moduleClassName) {
                 $this->fittlerParams($method);
                 $annotations = $this->annotations->getMethod($this->moduleClassName, $method->name);
                 foreach ($this->methodVerifyType as $value){
                     if (!$annotations->has($value)) {
                         $example = $this->annotationExample();
-                        $source = $this->request->getUserAgent();
-                        if(stripos($source, "Mobile/") > 0){
-                            throw new \Exception('您的备注缺少注解:@'. $value . '请补全, 类名:'. $this->moduleClassName);
-                        } else {
-                            dump('您的备注缺少注解:@'. $value . '请补全, 类名:'. $this->moduleClassName."\n\n    例子:".$example.PHP_EOL);die();
-                        }
-                        
+                        dump('您的备注缺少注解:@'. $value . '请补全, 类名:'. $this->moduleClassName."\n\n    例子:".$example.PHP_EOL);die();                  
                     }
                 }
             }
