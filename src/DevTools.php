@@ -15,6 +15,7 @@ namespace Eelly\DevTools;
 use Eelly\DevTools\BuildFile\ApiFile;
 use Eelly\DevTools\BuildFile\ModuleFile;
 use Eelly\DevTools\Events\DbListerner;
+use Eelly\DevTools\Events\InterceptCenter;
 use Phalcon\Di\Injectable;
 use Phalcon\DiInterface;
 use Symfony\Component\Console\Application;
@@ -28,9 +29,11 @@ class DevTools extends Injectable
 
     public function run(): void
     {
-        if (\Eelly\Application\ApplicationConst::ENV_TEST == $this->config->env && $this->config->mysqlMode) {
+        if (in_array($this->config->env, [\Eelly\Application\ApplicationConst::ENV_TEST, \Eelly\Application\ApplicationConst::ENV_DEVELOPMENT])) {
             $eventsManager = $this->di->getEventsManager();
-            $eventsManager->attach('db', new DbListerner());
+            $interceptCenter = new InterceptCenter($eventsManager);
+            $this->config->mysqlMode && $interceptCenter->registDbListener();
+            $this->config->annotationMode && $interceptCenter->registAnnotation();
         }
 
         $buildMode = $GLOBALS['buildMode'] ?? false;
