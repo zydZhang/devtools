@@ -92,7 +92,13 @@ class PhpunitFile extends File
         ]);
         $loader->register();
 
-        $dirInfo = new \DirectoryIterator($logicPath);
+        try{
+            $dirInfo = new \DirectoryIterator($logicPath);
+        }catch(\RuntimeException $e){
+            $this->unlinkFile(rtrim($this->phpunitDir, '/Logic/'));
+            exit($e->getMessage());
+        }
+
         foreach($dirInfo as $file){
             if (!$file->isDot() && $file->isFile()) {
                 $logicFiles[] = strchr($file->getFilename(), '.', true);
@@ -109,7 +115,7 @@ class PhpunitFile extends File
         $logicInfo = new \ReflectionClass($className);
         $methods = $logicInfo->getMethods();
         foreach($methods as $method){
-            if(!($method->class === $className)){
+            if($method->class !== $className || !$method->isPublic()){
                 continue;
             }
             $thisMehods[] = lcfirst($this->phpunitExt) . ucfirst($method->name);
