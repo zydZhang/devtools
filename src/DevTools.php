@@ -32,8 +32,8 @@ class DevTools extends Injectable
         if (in_array($this->config->env, [\Eelly\Application\ApplicationConst::ENV_TEST, \Eelly\Application\ApplicationConst::ENV_DEVELOPMENT])) {
             $eventsManager = $this->di->getEventsManager();
             $interceptCenter = new InterceptCenter($eventsManager);
-            $this->config->mysqlMode && $interceptCenter->registDbListener();
-            $this->config->annotationMode && $interceptCenter->registAnnotation();
+            $interceptCenter->registAnnotation();
+            $this->config->mysqlMode && $interceptCenter->registDbListener();       
         }
 
         $buildMode = $GLOBALS['buildMode'] ?? false;
