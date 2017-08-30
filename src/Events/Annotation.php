@@ -171,8 +171,7 @@ class Annotation extends Injectable
             $annotations = $this->annotations->getMethod('\\'.$method->class, $method->name);
             foreach ($this->methodVerifyType as $value) {
                 if (!$annotations->has($value)) {
-                    $example = $this->annotationExample();
-                    dd('您的备注缺少注解:@'.$value.'请补全, 接口名:'.$method->class."\n\n    例子:".$example.PHP_EOL);
+                    $this->echoError('您的备注缺少注解:@'.$value.'请补全, 接口名:'.$method->class);
                 }
             }
         }
@@ -191,18 +190,24 @@ class Annotation extends Injectable
         }
         foreach ($this->interface->getMethods() as $method) {
             if (empty($logicMethods[$method->name])) {
-                dump('接口方法名要与Logic方法名一致, 相关方法名:'.$method->class.':'.$method->name);
-                die();
+                $this->echoError('接口方法名要与Logic方法名一致, 相关方法名:'.$method->class.':'.$method->name);
             }
-            $annotationsInterface = $this->annotations->getMethod('\\'.$method->class, $method->name);
             $annotationsLogic = $this->annotations->getMethod('\\'.$logicMethods[$method->name]->class, $logicMethods[$method->name]->name);
             $interfaceMd5 = md5(str_replace([' ', "\n", "\r"], ['', '', ''], $method->getDocComment()));
             $logicMd5 = md5(str_replace([' ', "\n", "\r"], ['', '', ''], $logicMethods[$method->name]->getDocComment()));
-            dump($interfaceMd5, $logicMd5);
             if (!$annotationsLogic->has('see') && $logicMd5 != $interfaceMd5) {
-                dump('接口方法注释与Logic方法注释不一致, 相关方法名:'.$method->class.':'.$method->name);
-                die();
+                $this->echoError('接口方法注释与Logic方法注释不一致, 相关方法名:'.$method->class.':'.$method->name);
             }
         }
+    }
+    
+    /**
+     * 输出报错
+     * 
+     * @throws \Exception
+     */
+    private function echoError($msg)
+    {
+        throw new \Exception($msg);
     }
 }
