@@ -28,6 +28,13 @@ class VerifySql extends Injectable
         'randVerify'    => ['/order\s+rand/i', 'SQL查询禁用rand排序：'],
         'regularVerify' => ['/where.+\sregexp\s+(\'|")/i', 'SQL查询禁用正则：'],
     ];
+    
+    /**
+     * 需要过滤的表名
+     * 
+     * @var array 
+     */
+    private $fitterTable = ['INFORMATION_SCHEMA'];
 
     /**
      * sql连接池对象
@@ -48,6 +55,10 @@ class VerifySql extends Injectable
      */
     public function sqlVerify($sql)
     {
+        //不校验含过滤表名的语句
+        if($this->checkFittlerTable($sql)){
+            return '';
+        }
         //检验sql查询语句
         foreach ($this->sqlRule as $value) {
             if (preg_match($value[0], $sql)) {
@@ -129,6 +140,22 @@ class VerifySql extends Injectable
                 if (strtoupper($value['type']) == 'ALL') {
                     throw new \Exception('你的SQL有点问题,是不是应该优化优化,sql语句:'.$sql.' 类型:'.$value['type']);
                 }
+            }
+        }
+    }
+    
+    /**
+     * 判断是否含不校验的表
+     *
+     * @param string $sql
+     *
+     * @throws \Exception
+     */
+    private function checkFittlerTable($sql)
+    {
+        foreach($this->fitterTable as $value){
+            if(strpos($sql, $value) > 0){
+                return true;
             }
         }
     }
