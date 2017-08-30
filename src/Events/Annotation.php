@@ -86,7 +86,7 @@ class Annotation extends Injectable
             //验证方法规范
             $this->verifyMethod();
             //校验接口注释和Logic注释是否一致
-            $this->verifyLogicAndInterface();
+            //$this->verifyLogicAndInterface();
         }
     }
 
@@ -125,7 +125,7 @@ class Annotation extends Injectable
      */
     public function annotationExample()
     {
-        $example = '    
+        $example = '
         /**
          * 修改店铺地址
          * 修改店铺的店铺地址和退货地址
