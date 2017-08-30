@@ -46,7 +46,7 @@ class InterceptCenter
      */
     public function registAnnotation()
     {
-        $this->eventsManager->attach('controler', new AnnotationListerner());
+        $this->eventsManager->attach('controller', new AnnotationListerner());
     }
 }
 

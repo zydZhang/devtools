@@ -1,161 +1,126 @@
 <?php
 
-/* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+declare(strict_types=1);
+
+/*
+ * This file is part of eelly package.
+ *
+ * (c) eelly.com
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
+
 namespace Eelly\DevTools\Events;
 
-use Phalcon\Di\Injectable;
 use Phalcon\Annotations\Adapter\Memory as MemoryAdapter;
+use Phalcon\Di\Injectable;
 
 class Annotation extends Injectable
 {
     /**
-     * 注解检验类型
-     * 
-     * @var array 
+     * 注解检验类型.
+     *
+     * @var array
      */
     private $methodVerifyType = ['param', 'return', 'requestExample', 'returnExample', 'throws', 'author'];
-    
+
     /**
-     * 注解检验类型
-     * 
-     * @var array 
+     * 注解检验类型.
+     *
+     * @var array
      */
     private $fittlerMethod = ['__construct'];
-    
+
     /**
      * 反射对象
+     *
      * @var \ReflectionClass
      */
     private $reflector;
-    
+
     /**
      * 注解对象
+     *
      * @var object
      */
     private $annotations;
-    
+
     /**
-     * 根目录路径
+     * 根目录路径.
+     *
      * @var array
      */
     private $dirPath;
-    
+
     /**
      * 接口对象
-     * 
+     *
      * @var object
      */
     private $interface;
-    
+
     /**
-     * logic类
+     * logic类.
+     *
      * @var string
      */
     private $logic;
-    
+
     public function __construct($myComponent)
     {
         $this->dirPath = getcwd();
         $this->logic = $myComponent;
         $this->annotations = new MemoryAdapter();
     }
-    
+
     /**
-     * 注解校验
-     * 
+     * 注解校验.
+     *
      * @throws \Exception
      */
-    public function verify()
-    { 
+    public function verify(): void
+    {
         $this->setModuleClassName();
-        if(!empty($this->reflector)) {
+        if (!empty($this->interface)) {
             //验证方法规范
             $this->verifyMethod();
             //校验接口注释和Logic注释是否一致
             $this->verifyLogicAndInterface();
         }
     }
-    
+
     /**
-     * 设置模块名
-     * 
+     * 设置模块名.
+     *
      * @throws \Exception
      */
-    public function setModuleClassName()
+    public function setModuleClassName(): void
     {
         $this->reflector = new \ReflectionClass($this->logic);
-        $this->interface = $this->reflector->getInterfaces();
-        $this->interface = end($this->interface);
-    }
-    
-    /**
-     * 验证方法相关规范
-     * 
-     * @throws \Exception
-     */
-    private function verifyMethod()
-    {
-        foreach ($this->interface->getMethods() as $method) {
-            if(in_array($method->name, $this->fittlerMethod)){
-                continue;
-            }
-            $this->fittlerParams($method);
-            $annotations = $this->annotations->getMethod('\\'.$method->class, $method->name);
-            foreach ($this->methodVerifyType as $value){
-                if (!$annotations->has($value)) {
-                    $example = $this->annotationExample();
-                    dump('您的备注缺少注解:@'. $value . '请补全, 接口名:'. $method->class."\n\n    例子:".$example.PHP_EOL);die();                  
-                }
-            }
+        $interfaces = $this->reflector->getInterfaces();
+        $this->interface = end($interfaces);
+        if (0 < count($this->interface->getInterfaceNames())) {
+            $this->interface = null;
         }
     }
-    
+
     /**
-     * 校验接口注释和Logic注释是否一致
-     * 
+     * 如果不用传参数时, param不用校验.
+     *
      * @throws \Exception
      */
-    private function verifyLogicAndInterface()
+    public function fittlerParams($method): void
     {
-        $logicMethods = [];
-        foreach ($this->reflector->getMethods() as $method) {
-            $logicMethods[$method->name] = $method;
-        }
-        foreach ($this->interface->getMethods() as $method) {
-            if(empty($logicMethods[$method->name])){
-                dump('接口方法名要与Logic方法名一致, 相关方法名:'.$method->class.":".$method->name);die();   
-            }
-            $annotationsInterface = $this->annotations->getMethod('\\'.$method->class, $method->name);
-            $annotationsLogic = $this->annotations->getMethod('\\'.$logicMethods[$method->name]->class, $logicMethods[$method->name]->name);
-            $interfaceMd5 = md5(str_replace([" ", "\n", "\r"], ["", "", ""], $method->getDocComment()));
-            $logicMd5 = md5(str_replace([" ", "\n", "\r"], ["", "", ""], $logicMethods[$method->name]->getDocComment()));
-            dump($interfaceMd5, $logicMd5);
-            if(!$annotationsLogic->has('see') && $logicMd5 != $interfaceMd5){
-                dump('接口方法注释与Logic方法注释不一致, 相关方法名:'.$method->class.":".$method->name);die(); 
-            }
-        }
-    }
-    
-    /**
-     * 如果不用传参数时, param不用校验
-     * 
-     * @throws \Exception
-     */
-    public function fittlerParams($method)
-    {
-        if($method->getNumberOfParameters() == 0){
+        if ($method->getNumberOfParameters() == 0) {
             $offset = array_search('param', $this->methodVerifyType);
             unset($this->methodVerifyType[$offset]);
         }
     }
-    
+
     /**
-     * 注释事例
-     * 
+     * 注释事例.
+     *
      * @throws \Exception
      */
     public function annotationExample()
@@ -187,7 +152,57 @@ class Annotation extends Injectable
          *
          * @since 2017年08月10日
          */';
+
         return $example;
     }
-}
 
+    /**
+     * 验证方法相关规范.
+     *
+     * @throws \Exception
+     */
+    private function verifyMethod(): void
+    {
+        foreach ($this->interface->getMethods() as $method) {
+            if (in_array($method->name, $this->fittlerMethod)) {
+                continue;
+            }
+            $this->fittlerParams($method);
+            $annotations = $this->annotations->getMethod('\\'.$method->class, $method->name);
+            foreach ($this->methodVerifyType as $value) {
+                if (!$annotations->has($value)) {
+                    $example = $this->annotationExample();
+                    dd('您的备注缺少注解:@'.$value.'请补全, 接口名:'.$method->class."\n\n    例子:".$example.PHP_EOL);
+                }
+            }
+        }
+    }
+
+    /**
+     * 校验接口注释和Logic注释是否一致.
+     *
+     * @throws \Exception
+     */
+    private function verifyLogicAndInterface(): void
+    {
+        $logicMethods = [];
+        foreach ($this->reflector->getMethods() as $method) {
+            $logicMethods[$method->name] = $method;
+        }
+        foreach ($this->interface->getMethods() as $method) {
+            if (empty($logicMethods[$method->name])) {
+                dump('接口方法名要与Logic方法名一致, 相关方法名:'.$method->class.':'.$method->name);
+                die();
+            }
+            $annotationsInterface = $this->annotations->getMethod('\\'.$method->class, $method->name);
+            $annotationsLogic = $this->annotations->getMethod('\\'.$logicMethods[$method->name]->class, $logicMethods[$method->name]->name);
+            $interfaceMd5 = md5(str_replace([' ', "\n", "\r"], ['', '', ''], $method->getDocComment()));
+            $logicMd5 = md5(str_replace([' ', "\n", "\r"], ['', '', ''], $logicMethods[$method->name]->getDocComment()));
+            dump($interfaceMd5, $logicMd5);
+            if (!$annotationsLogic->has('see') && $logicMd5 != $interfaceMd5) {
+                dump('接口方法注释与Logic方法注释不一致, 相关方法名:'.$method->class.':'.$method->name);
+                die();
+            }
+        }
+    }
+}
