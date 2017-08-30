@@ -27,24 +27,6 @@ class Annotation extends Injectable
     private $fittlerMethod = ['__construct'];
     
     /**
-     * 配置信息
-     * @var object 
-     */
-    private $config;
-    
-    /**
-     * 路由信息
-     * @var object 
-     */
-    private $route;
-    
-    /**
-     * http请求
-     * @var object 
-     */
-    private $request;
-    
-    /**
      * 反射对象
      * @var \ReflectionClass
      */
@@ -63,16 +45,22 @@ class Annotation extends Injectable
     private $dirPath;
     
     /**
-     * 模块类名
+     * 接口对象
+     * 
+     * @var object
+     */
+    private $interface;
+    
+    /**
+     * logic类
      * @var string
      */
-    private $moduleClassName;
+    private $logic;
     
-    public function __construct()
+    public function __construct($myComponent)
     {
-        $this->config = $this->di->get("config");
-        $this->route = $this->di->get("router");
         $this->dirPath = getcwd();
+        $this->logic = $myComponent;
         $this->annotations = new MemoryAdapter();
     }
     
@@ -87,6 +75,8 @@ class Annotation extends Injectable
         if(!empty($this->reflector)) {
             //验证方法规范
             $this->verifyMethod();
+            //校验接口注释和Logic注释是否一致
+            $this->verifyLogicAndInterface();
         }
     }
     
@@ -97,19 +87,9 @@ class Annotation extends Injectable
      */
     public function setModuleClassName()
     {
-        $moduleName = $this->route->getModuleName();
-        $controllerName = $this->route->getControllerName();
-        $actionName = $this->route->getActionName();
-        if(empty($controllerName) || empty($actionName)) {
-            return '';
-        }
-        $moduleName = '/'. ucfirst($moduleName.'/Logic/'.ucfirst($controllerName).'Logic');
-        $fileName = $this->dirPath.'/src'.$moduleName.'.php';
-        if(file_exists($fileName)) {
-            $this->moduleClassName = str_replace('/', '\\', $moduleName);
-            $this->reflector = new \ReflectionClass($this->moduleClassName);
-        }
-        return '';
+        $this->reflector = new \ReflectionClass($this->logic);
+        $this->interface = $this->reflector->getInterfaces();
+        $this->interface = end($this->interface);
     }
     
     /**
@@ -119,19 +99,43 @@ class Annotation extends Injectable
      */
     private function verifyMethod()
     {
-        foreach ($this->reflector->getMethods() as $method) {
+        foreach ($this->interface->getMethods() as $method) {
             if(in_array($method->name, $this->fittlerMethod)){
                 continue;
             }
-            if ('\\'.$method->class == $this->moduleClassName) {
-                $this->fittlerParams($method);
-                $annotations = $this->annotations->getMethod($this->moduleClassName, $method->name);
-                foreach ($this->methodVerifyType as $value){
-                    if (!$annotations->has($value)) {
-                        $example = $this->annotationExample();
-                        dump('您的备注缺少注解:@'. $value . '请补全, 类名:'. $this->moduleClassName."\n\n    例子:".$example.PHP_EOL);die();                  
-                    }
+            $this->fittlerParams($method);
+            $annotations = $this->annotations->getMethod('\\'.$method->class, $method->name);
+            foreach ($this->methodVerifyType as $value){
+                if (!$annotations->has($value)) {
+                    $example = $this->annotationExample();
+                    dump('您的备注缺少注解:@'. $value . '请补全, 接口名:'. $method->class."\n\n    例子:".$example.PHP_EOL);die();                  
                 }
+            }
+        }
+    }
+    
+    /**
+     * 校验接口注释和Logic注释是否一致
+     * 
+     * @throws \Exception
+     */
+    private function verifyLogicAndInterface()
+    {
+        $logicMethods = [];
+        foreach ($this->reflector->getMethods() as $method) {
+            $logicMethods[$method->name] = $method;
+        }
+        foreach ($this->interface->getMethods() as $method) {
+            if(empty($logicMethods[$method->name])){
+                dump('接口方法名要与Logic方法名一致, 相关方法名:'.$method->class.":".$method->name);die();   
+            }
+            $annotationsInterface = $this->annotations->getMethod('\\'.$method->class, $method->name);
+            $annotationsLogic = $this->annotations->getMethod('\\'.$logicMethods[$method->name]->class, $logicMethods[$method->name]->name);
+            $interfaceMd5 = md5(str_replace([" ", "\n", "\r"], ["", "", ""], $method->getDocComment()));
+            $logicMd5 = md5(str_replace([" ", "\n", "\r"], ["", "", ""], $logicMethods[$method->name]->getDocComment()));
+            dump($interfaceMd5, $logicMd5);
+            if(!$annotationsLogic->has('see') && $logicMd5 != $interfaceMd5){
+                dump('接口方法注释与Logic方法注释不一致, 相关方法名:'.$method->class.":".$method->name);die(); 
             }
         }
     }
