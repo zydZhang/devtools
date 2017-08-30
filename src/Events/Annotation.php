@@ -76,7 +76,7 @@ class Annotation extends Injectable
             //验证方法规范
             $this->verifyMethod();
             //校验接口注释和Logic注释是否一致
-            $this->verifyLogicAndInterface();
+            //$this->verifyLogicAndInterface();
         }
     }
     
