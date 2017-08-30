@@ -19,9 +19,9 @@ class AnnotationListerner
     {
     }
     
-    public function init()
+    public function init($event, $myComponent)
     {
-        $annotation = new Annotation();
+        $annotation = new Annotation($myComponent);
         $annotation->verify();
     }
 
