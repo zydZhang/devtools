@@ -688,8 +688,8 @@ EOF;
             'qualifier' => 'public',
             'params' => [
                 ['type' => 'array', 'name' => 'condition', 'defaultValue' => '[]'],
-                ['type' => 'int', 'name' => 'limit', 'defaultValue' => '10'],
                 ['type' => 'int', 'name' => 'currentPage', 'defaultValue' => '1'],
+                ['type' => 'int', 'name' => 'limit', 'defaultValue' => '10'],
             ],
             'return' => [
                 'type' => 'array',

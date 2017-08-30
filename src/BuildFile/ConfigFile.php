@@ -21,8 +21,8 @@ class ConfigFile extends File
      */
     protected $configDir = [
         'dev'   => 'var/config/dev/',
-        'test'  => 'var/config/test/',
-        'local' => 'var/config/local/',
+//         'test'  => 'var/config/test/',
+//         'local' => 'var/config/local/',
         'prod'  => 'var/config/prod/',
     ];
 
