@@ -111,7 +111,9 @@ class VerifySql extends Injectable
                 }
                 is_string($value) && $variables[$key] = "'".$value."'";
             }
-            $explainSql = str_replace(array_keys($variables), array_values($variables), $explainSql);
+            $search = array_keys($variables);
+            $search[] = ':';
+            $explainSql = str_replace($search, array_values($variables), $explainSql);
         }
 
         $result = $this->connection->query($explainSql);
