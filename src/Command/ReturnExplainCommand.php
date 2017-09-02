@@ -23,7 +23,20 @@ use Symfony\Component\Console\Exception\RuntimeException;
 
 class ReturnExplainCommand extends BaseCommand
 {
-    private $annotationName = 'returnExample';
+    private $annotations = [
+        'example' => 'returnExample',
+        'explain' => 'explain',
+    ];
+
+    private $parameterType = [
+        301 => 'int',
+        302 => 'double',
+        303 => 'string',
+        304 => 'null',
+        305 => 'bool',
+        306 => 'bool',
+        308 => 'array'
+    ];
 
     /**
      * 配置命令
@@ -54,8 +67,8 @@ class ReturnExplainCommand extends BaseCommand
         }
         list($moduleName, $interfaceName) = explode(':', $interfaceName);
         $methodName = $input->getArgument('methodName');
-        $returnExample = $this->getMethodReturnExample($moduleName, $interfaceName, $methodName);
-        $output->writeln($returnExample);
+        $this->setMethodNewDocument($moduleName, $interfaceName, $methodName);
+        $output->writeln('生成完成');
     }
 
     /**
@@ -69,38 +82,99 @@ class ReturnExplainCommand extends BaseCommand
      * @author wangjiang<wangjiang@eelly.net>
      * 2017年8月24日
      */
-    private function getMethodReturnExample(string $moduleName, string $interfaceName, string $methodName): string
+    private function getMethodReturnExample(\Phalcon\Annotations\Collection $reader): string
+    {
+        if(!$reader->has($this->annotations['example'])){
+            throw new RuntimeException('not found annotation:' . $this->annotations['example']);
+        }
+
+        $returnExample = $reader->get($this->annotations['example'])->getArgument(0);
+        if(!is_array($returnExample)){
+            throw new RuntimeException('return example not json');
+        }
+
+        /** @var \Phalcon\Annotations\Annotation $example */
+        $example = $reader->get($this->annotations['example']);
+        $arguments = $example->getExprArguments();
+        // 区分{}和[]json格式的数据
+        $arguments = 1 < count($arguments[0]['expr']['items']) ? $arguments[0]['expr']['items'] : $arguments[0]['expr']['items'][0]['expr']['items'];
+        $exprArguments = $this->getExprArguments($arguments);
+        $returnFields = [];
+        $maxKey = '';
+        foreach($exprArguments as $key => $val){
+            $key = preg_replace_callback('/_(\w*)/', function($match){
+                return sprintf('[%s]', $match[1]);
+            }, $key);
+            $returnFields[$key] = $val;
+            empty($maxKey) && $maxKey = $key;
+            strlen($maxKey) < strlen($key) && $maxKey = $key;
+        }
+
+        $max = strlen($maxKey) + 1;
+        $returnExampleStr = sprintf('%-s*','') . ' ### 返回数据说明' . PHP_EOL;
+        $returnExampleStr .= sprintf('%-5s*','') . PHP_EOL;
+        $returnExampleStr .= sprintf('%-5s* %-s|%-s|%-s', '', '字段', '类型', '说明') . PHP_EOL;
+        $returnExampleStr .= sprintf('%-5s* %s|%s|%s', '', str_repeat('-', $max), str_repeat('-', 7),str_repeat('-', 14)) . PHP_EOL;
+        foreach($returnFields as $field => $fieldType){
+            $returnExampleStr .= sprintf('%-5s* %-' . $max . 's|%-7s|', '', $field, $fieldType) . PHP_EOL;
+        }
+
+        return $returnExampleStr;
+    }
+
+    /**
+     * 设置方法的返回数据说明文档
+     *
+     * @param string $moduleName
+     * @param string $interfaceName
+     * @param string $methodName
+     * @throws RuntimeException
+     */
+    private function setMethodNewDocument(string $moduleName, string $interfaceName, string $methodName): void
     {
         $className = sprintf('Eelly\\SDK\\%s\\Service\\%sInterface', ucfirst($moduleName), ucfirst($interfaceName));
         $di = $this->getDI();
         /** @var Memory $annotations */
         $annotations = $di->getShared(Memory::class);
         $reader = $annotations->getMethod($className, $methodName);
-        if(!$reader->has($this->annotationName)){
-            throw new RuntimeException('not found annotation:' . $this->annotationName);
+        if(!$reader->has($this->annotations['explain'])){
+            throw new RuntimeException('not found annotation:' . $this->annotations['explain']);
         }
 
-        $returnExample = $reader->get($this->annotationName)->getArgument(0);
-        if(!is_array($returnExample)){
-            throw new RuntimeException('return example not json');
-        }
-
-        count($returnExample) !== count($returnExample, COUNT_RECURSIVE) && $returnExample = current($returnExample);
-        $exampleArr = [];
-        $returnFields = array_keys($returnExample);
-        array_walk($returnExample, function($val, $key) use (&$exampleArr){
-            $exampleArr[$key] = strlen($key);
-        });
-
-        $max = max($exampleArr) + 1;
-        $returnExampleStr = '### 返回数据说明' . PHP_EOL;
-        $returnExampleStr .= sprintf('%-5s*','') . PHP_EOL;
-        $returnExampleStr .= sprintf('%-5s* %-' . ($max + 2) .'s|%-9s|%-16s', '', '字段', '类型', '说明') . PHP_EOL;
-        $returnExampleStr .= sprintf('%-5s* %s|%s|%s', '', str_repeat('-', $max), str_repeat('-', 7),str_repeat('-', 14)) . PHP_EOL;
-        foreach($returnFields as $field){
-            $returnExampleStr .= sprintf('%-5s* %-' . $max . 's|%-7s|%-14s', '', $field, '', '') . PHP_EOL;
-        }
-
-        return $returnExampleStr;
+        $methodReflection = new \ReflectionMethod($className, $methodName);
+        $filePath = $methodReflection->getFileName();
+        $methodDoc = $methodReflection->getDocComment();
+        $returnExplain = $this->getMethodReturnExample($reader) . sprintf('%-5s*', '');
+        $newMethodDoc = preg_replace('/\*\s*@explain/', $returnExplain, $methodDoc);
+        $newFileContent = str_replace($methodDoc, $newMethodDoc, file_get_contents($filePath));
+        file_put_contents($filePath, $newFileContent);
     }
+
+    /**
+     * 递归获取参数类型
+     *
+     * @param array $arguments
+     * @param string $parentName
+     * @return array
+     */
+    private function getExprArguments(array $arguments, string $parentName = ''): array
+    {
+        if(empty($arguments)){
+            return [];
+        }
+
+        $exprs = [];
+        foreach($arguments as $argument){
+            $name = $parentName . $argument['name'];
+            $type = $argument['expr']['type'];
+            $exprs[$name] = $this->parameterType[$type] ?? '';
+            if(isset($argument['expr']['items'])){
+                $args = $argument['expr']['items'];
+                $exprs += $this->getExprArguments($args[0]['expr']['items'], $name . '_');
+            }
+        }
+
+        return $exprs;
+    }
+
 }
