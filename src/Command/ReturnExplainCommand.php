@@ -97,7 +97,7 @@ class ReturnExplainCommand extends BaseCommand
         $example = $reader->get($this->annotations['example']);
         $arguments = $example->getExprArguments();
         // 区分{}和[]json格式的数据
-        $arguments = 1 < count($arguments[0]['expr']['items']) ? $arguments[0]['expr']['items'] : $arguments[0]['expr']['items'][0]['expr']['items'];
+        $arguments = $arguments[0]['expr']['items'];
         $exprArguments = $this->getExprArguments($arguments);
         $returnFields = [];
         $maxKey = '';
@@ -162,15 +162,19 @@ class ReturnExplainCommand extends BaseCommand
         if(empty($arguments)){
             return [];
         }
-
         $exprs = [];
         foreach($arguments as $argument){
+            if(!isset($argument['name'])){
+                $exprs += $this->getExprArguments($argument['expr']['items'], $parentName);
+                continue;
+            }
+
             $name = $parentName . $argument['name'];
             $type = $argument['expr']['type'];
             $exprs[$name] = $this->parameterType[$type] ?? '';
             if(isset($argument['expr']['items'])){
                 $args = $argument['expr']['items'];
-                $exprs += $this->getExprArguments($args[0]['expr']['items'], $name . '_');
+                $exprs += $this->getExprArguments($args, $name . '_');
             }
         }
 
