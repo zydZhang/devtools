@@ -103,19 +103,13 @@ class VerifySql extends Injectable
         $variables = $this->connection->getSqlVariables();
         if (!empty($variables)) {
             foreach ($variables as $key => $value) {
-                //怀疑有BUG 所以强制判断一下
-                if (strpos($key, 'APL') !== false && substr($key, 0, 1) != ':') {
-                    $variables[':'.$key] = $value;
-                    unset($variables[$key]);
-                    $key = ':'.$key;
-                }
-                is_string($value) && $variables[$key] = "'".$value."'";
+                $variables[':'.$key] = $value;
+                unset($variables[$key]);
+                $key = ':'.$key;
+                is_string($value) && $variables[$key] = "'".$value."'";              
             }
-            $search = array_keys($variables);
-            $search[] = ':';
-            $explainSql = str_replace($search, array_values($variables), $explainSql);
+            $explainSql = str_replace(array_keys($variables), array_values($variables), $explainSql);
         }
-
         $result = $this->connection->query($explainSql);
         $result->setFetchMode(\Phalcon\Db::FETCH_ASSOC);
         $explainResult = $result->fetchAll();
@@ -139,7 +133,7 @@ class VerifySql extends Injectable
         }
         if (!empty($explainResult)) {
             foreach ($explainResult as $key => $value) {
-                if (strtoupper($value['type']) == 'ALL') {
+                if (isset($value['type']) && strtoupper($value['type']) == 'ALL') {
                     throw new \Exception('你的SQL有点问题,是不是应该优化优化,sql语句:'.$sql.' 类型:'.$value['type']);
                 }
             }
