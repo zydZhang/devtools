@@ -59,6 +59,10 @@ class VerifySql extends Injectable
         if($this->checkFittlerTable($sql)){
             return '';
         }
+        //校验注解是否含求放过
+        if($this->checkHasBadSql()){
+            return '';
+        }
         //检验sql查询语句
         foreach ($this->sqlRule as $value) {
             if (preg_match($value[0], $sql)) {
@@ -105,26 +109,8 @@ class VerifySql extends Injectable
         $result = $this->connection->query($explainSql, $variables, $bindTypes);
         $result->setFetchMode(\Phalcon\Db::FETCH_ASSOC);
         $explainResult = $result->fetchAll();
-        //获取路由注解信息
-        /*$router = $this->di->get("router");
-        $nameSpace = $router->getNamespaceName();
-        $controllerName = $router->getControllerName();
-        $methodName = $router->getActionName();
-        $controllerClass = $nameSpace.'\\'.ucfirst($controllerName).'Logic';*/
-        $trace = debug_backtrace();
-        foreach ($trace as $value) {
-            if (strpos($value['class'], '\\Logic\\') !== false || strpos($value['class'], '\\Model\\') !== false) {
-                $annotations = $this->annotations->getMethod(
-                    $value['class'],
-                    $value['function']
-                );
-                if ($annotations->has('badSql')) {
-                    return true;
-                }
-            }
-        }
         if (!empty($explainResult)) {
-            foreach ($explainResult as $key => $value) {
+            foreach ($explainResult as $value) {
                 if (isset($value['type']) && strtoupper($value['type']) == 'ALL') {
                     throw new \Exception('你的SQL有点问题,是不是应该优化优化,sql语句:'.$sql.' 类型:'.$value['type']);
                 }
@@ -146,5 +132,28 @@ class VerifySql extends Injectable
                 return true;
             }
         }
+    }
+    
+    /**
+     * 判断是否含求放过的注解
+     *
+     *
+     * @throws \Exception
+     */
+    private function checkHasBadSql()
+    {
+        $trace = debug_backtrace();
+        foreach ($trace as $value) {
+            if (strpos($value['class'], '\\Logic\\') !== false || strpos($value['class'], '\\Model\\') !== false) {
+                $annotations = $this->annotations->getMethod(
+                    $value['class'],
+                    $value['function']
+                );
+                if ($annotations->has('badSql')) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
