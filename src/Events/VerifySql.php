@@ -101,16 +101,8 @@ class VerifySql extends Injectable
     {
         $explainSql = 'explain '.$sql;
         $variables = $this->connection->getSqlVariables();
-        if (!empty($variables)) {
-            foreach ($variables as $key => $value) {
-                $variables[':'.$key] = $value;
-                unset($variables[$key]);
-                $key = ':'.$key;
-                is_string($value) && $variables[$key] = "'".$value."'";              
-            }
-            $explainSql = str_replace(array_keys($variables), array_values($variables), $explainSql);
-        }
-        $result = $this->connection->query($explainSql);
+        $bindTypes = $this->connection->getSQLBindTypes();
+        $result = $this->connection->query($explainSql, $variables, $bindTypes);
         $result->setFetchMode(\Phalcon\Db::FETCH_ASSOC);
         $explainResult = $result->fetchAll();
         //获取路由注解信息
