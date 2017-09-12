@@ -130,9 +130,10 @@ class RequestArgsCommand extends BaseCommand
         $exprArguments = $this->getExprArguments($arguments);
         $requestArgsStr = '*' . PHP_EOL;
         foreach($exprArguments as $field => $fieldType){
-            $field = preg_replace_callback('/_(\w*)/', function($match){
-                return sprintf('["%s"]', $match[1]);
-            }, $field);
+            $field = explode('_', (string)$field);
+            $field = array_reduce($field, function($str, $val){
+                return $str .= empty($str) ? $val : '["'. $val .'"]';
+            });
             $requestArgsStr .= sprintf('%-5s* @param %s %s', '', $fieldType, '$' . $field) . PHP_EOL;
         }
         $hasUidDTO && $requestArgsStr .= sprintf('%-5s* @param \\Eelly\\DTO\\UidDTO $user 登录用户信息', '') . PHP_EOL;
@@ -154,9 +155,15 @@ class RequestArgsCommand extends BaseCommand
             return [];
         }
         $exprs = [];
-        foreach($arguments as $argument){
+        foreach($arguments as $offset => $argument){
             if(!isset($argument['name'])){
-                $exprs += $this->getExprArguments($argument['expr']['items'], $parentName);
+                if (isset($argument['expr']['items'])) {
+                    $items = $this->getExprArguments($argument['expr']['items'], $parentName);
+                } else {
+                    $type = $argument['expr']['type'];
+                    $items[$parentName . $offset] = $this->parameterType[$type] ?? '';
+                }
+                $exprs += $items;
                 continue;
             }
 
