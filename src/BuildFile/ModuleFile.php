@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 /*
  * This file is part of eelly package.
  *
@@ -44,7 +45,7 @@ class ModuleFile extends File
     protected $moduleName = '';
 
     /**
-     * 模块文件导入命名空间
+     * 模块文件导入命名空间.
      *
      * @var array
      */
@@ -54,7 +55,6 @@ class ModuleFile extends File
         'Eelly\Events\Listener\AsyncAnnotationListener',
         'Eelly\Events\Listener\CacheAnnotationListener',
         'Eelly\Events\Listener\ValidationAnnotationListener',
-        'Eelly\FastDFS\Client as FastDFSClient',
         'Eelly\Mvc\AbstractModule',
         'Member\Command\TestCommand',
         'Phalcon\DiInterface as Di',

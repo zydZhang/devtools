@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 /*
  * This file is part of eelly package.
  *
@@ -35,7 +36,6 @@ class ConfigFile extends File
         'annotations.php',
         'cache.php',
         'easemob.php',
-        'fastdfs.php',
         'mongodb.php',
         'mysql.php',
         'amqp.php',

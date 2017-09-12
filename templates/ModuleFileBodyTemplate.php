@@ -15,13 +15,6 @@
     public function registerUserServices(Di $di): void
     {
         /**
-        // fastdfs service
-        $di->setShared('fastdfs', function () {
-            $config = $this->getModuleConfig()->fastdfs;
-
-            return new FastDFSClient($config->toArray());
-        });
-
         // 需配置config/dev/mysql.php
         $this->registerDbService();
         // 需配置config/dev/amqp.php
