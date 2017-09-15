@@ -530,6 +530,21 @@ EOF;
         // 参数描述
         preg_match_all('/@param.*\$[\w]*\s+([^\s][^\n\*]*)\n/U', $docComment, $paramArr);
         $methodDescription['paramDescribe'] = $paramArr[1] ?? [];
+        // 子参数的描述(参数为数组时)
+        preg_match_all('/@param\s+(.*)\s+\$(.*)\[(.*)\]\s+([^\s][^\n\*]*)\n/U', $docComment, $subParamArr);
+        $subParam = [];
+        $subParamTypeArr = $subParamArr[1] ?? [];
+        $parentParamArr = $subParamArr[2] ?? [];
+        $subParamNameArr = $subParamArr[3] ?? [];
+        $subParamdDescribeArr = $subParamArr[4] ?? [];
+        array_walk($parentParamArr, function($val, $key) use (&$subParam, $subParamTypeArr, $subParamNameArr, $subParamdDescribeArr){
+            $subParam[$val][] = [
+                'name' => isset($subParamNameArr[$key]) ? trim($subParamNameArr[$key], '\'"') : '',
+                'type' => $subParamTypeArr[$key] ?? '',
+                'describe' => $subParamdDescribeArr[$key] ?? '',
+            ];
+        });
+        $methodDescription['subParam'] = $subParam;
         // 请求参数示例
         preg_match('/@requestExample\((.*)\)/sU', $docComment, $requestExample);
         $methodDescription['requestExample'] = $requestExample[1] ?? '';
@@ -573,6 +588,8 @@ EOF;
         $requestExample = json_decode($descriptions['requestExample'], true) ?: [];
         $returnExample = $descriptions['returnExample'];
         $paramExample = $this->getParamExample($methodParam, $requestExample);
+        $subParam = $descriptions['subParam'];
+        $subRequestData = [];
         if(!empty($methodParam)){
             foreach ($methodParam as $paramId => $param) {
                 $requestData[] = [
@@ -585,8 +602,28 @@ EOF;
                     'is_must' => (int)! $param['hasDefaultVal'],
                     'created_time' => time()
                 ];
+                $subRequest = $subParam[$param['name']] ?? [];
+                if(!empty($subRequest)){
+                    foreach($subRequest as $sub){
+                        $subParamIdMust = 0;
+                        $subParamType = $sub['type'] ?? '';
+                        false === stripos($subParamType, 'null') && $subParamIdMust = 1;
+                        $subParamType = trim(trim($subParamType, 'nullNULL'),'|');
+                        $subRequestData[$param['name']][] = [
+                            'data_type' => 2,
+                            'param_type' => $subParamType,
+                            'param_name' => $sub['name'] ?? '',
+                            'param_example' => $this->getSubParamExample($paramExample[$paramId] ?? '', $sub['name'] ?? ''),
+                            'comment' => $sub['describe'] ?? '',
+                            'is_must' => $subParamIdMust,
+                            'created_time' => time()
+                        ];
+                    }
+                }
             }
+
             $this->eellyAcl->addPermissionRequest($requestData, $hashName);
+            $this->eellyAcl->addPermissionRequestSubParam($subRequestData, $hashName);
         }
 
         if(isset($descriptions['returnInfo'])){
@@ -785,5 +822,24 @@ EOF;
         $paramType = array_column($methodParam, 'type');
 
         return (bool)array_intersect($loginMark, $paramType);
+    }
+
+    /**
+     * 获取子参数的示例
+     *
+     * @param string $parentParamExample
+     * @param string $subName
+     * @return string|string|mixed
+     */
+    private function getSubParamExample(string $parentParamExample, string $subName)
+    {
+        if(empty($parentParamExample) || empty($subName)){
+            return '';
+        }
+
+        $parentParamExample = json_decode($parentParamExample, true);
+        count($parentParamExample) != count($parentParamExample, COUNT_RECURSIVE) && $parentParamExample = current($parentParamExample);
+
+        return $parentParamExample[$subName] ?? '';
     }
 }

@@ -102,9 +102,10 @@ class ReturnExplainCommand extends BaseCommand
         $returnFields = [];
         $maxKey = '';
         foreach($exprArguments as $key => $val){
-            $key = preg_replace_callback('/_(\w*)/', function($match){
-                return sprintf('[%s]', $match[1]);
-            }, $key);
+            $key = explode('_', (string)$key);
+            $key = array_reduce($key, function($str, $val){
+                return $str .= empty($str) ? $val : '["'. $val .'"]';
+            });
             $returnFields[$key] = $val;
             empty($maxKey) && $maxKey = $key;
             strlen($maxKey) < strlen($key) && $maxKey = $key;
@@ -163,9 +164,15 @@ class ReturnExplainCommand extends BaseCommand
             return [];
         }
         $exprs = [];
-        foreach($arguments as $argument){
+        foreach($arguments as $offset => $argument){
             if(!isset($argument['name'])){
-                $exprs += $this->getExprArguments($argument['expr']['items'], $parentName);
+                if (isset($argument['expr']['items'])) {
+                    $items = $this->getExprArguments($argument['expr']['items'], $parentName);
+                } else {
+                    $type = $argument['expr']['type'];
+                    $items[$parentName . $offset] = $this->parameterType[$type] ?? '';
+                }
+                $exprs += $items;
                 continue;
             }
 
