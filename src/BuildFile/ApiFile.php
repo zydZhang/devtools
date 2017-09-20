@@ -903,7 +903,7 @@ EOF;
             return;
         }
 
-        0 < count($nameArr) && $this->setReturnDetail($nameArr, $returnDetail[$name]['children'], $detailData);
+        $this->setReturnDetail($nameArr, $returnDetail[$name]['children'], $detailData);
     }
 
 }
