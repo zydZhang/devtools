@@ -196,6 +196,7 @@ class ApiFile extends File
         $this->serviceName = $this->moduleName.'\\Logic\\'.ucfirst($apiName).'Logic';
         $templates = $this->getTemplateFile('Base');
         $apiPath = $this->apiDir.'/'.$this->apiName.$this->fileExt;
+        !is_dir($this->apiDir) && mkdir($this->apiDir, 0755, true);
         $apiImplements = $this->apiName.'Interface';
         $apiFileCode = $this->getApiFileCode($apiImplements, $templates, false, true);
         !file_exists($apiPath) && file_put_contents($apiPath, $apiFileCode);
@@ -562,6 +563,9 @@ EOF;
                 'returnDescribe' => $returnDescription[3][$key] ?? '',
             ];
         }
+        // 返回数据详情
+        preg_match_all('/\*\s*([\w\[\]\'\"]+)\s*\|([\w]+)\s*\|(.*)/', $docComment, $returnDetailArr);
+        $methodDescription['returnDetail'] = $this->getReturnDetail($returnDetailArr);
 
         return $methodDescription;
     }
@@ -627,6 +631,7 @@ EOF;
         }
 
         if(isset($descriptions['returnInfo'])){
+            $returnDetail = $descriptions['returnDetail'] ?? '';
             foreach ($descriptions['returnInfo'] as $info){
                 $dataType = 'return' == $info['type'] ? 1 : 2;
                 $returnData[] = [
@@ -635,6 +640,7 @@ EOF;
                     'comment' => $info['returnDescribe'],
                     'return_example' => 1 == $dataType ? $returnExample : $info['returnValue'],
                     'created_time' => time(),
+                    'return_detail' => 1 == $dataType ? $returnDetail : '',
                 ];
             }
             $this->eellyAcl->addPermissionReturn($returnData, $hashName);
@@ -842,4 +848,62 @@ EOF;
 
         return $parentParamExample[$subName] ?? '';
     }
+
+    /**
+     * 获取返回数据详情
+     *
+     * @param array $returnDetailArr
+     * @return string
+     */
+    private function getReturnDetail(array $returnDetailArr): string
+    {
+        $returnDetailNameArr = $returnDetailArr[1] ?? [];
+        $returnDetailTypeArr = $returnDetailArr[2] ?? [];
+        $returnDetailDescribeArr = $returnDetailArr[3] ?? [];
+        $returnDetail = [];
+        foreach($returnDetailNameArr as $key => $val){
+            $nameArr = array_map(function($val){
+                return str_replace([']', '"', "'"], '', $val);
+            }, explode('[', $val));
+            if(1 < count($nameArr)){
+                $currentName = array_pop($nameArr);
+                $detailData = [
+                    'ret_name' => $currentName,
+                    'data_type' => $returnDetailTypeArr[$key],
+                    'remark' => $returnDetailDescribeArr[$key],
+//                     'children' => [],
+                ];
+                $this->setReturnDetail($nameArr, $returnDetail, $detailData);
+            }else{
+                $returnDetail[$val] = [
+                    'ret_name' => $val,
+                    'data_type' => $returnDetailTypeArr[$key],
+                    'remark' => $returnDetailDescribeArr[$key],
+//                     'children' => [],
+                ];
+            }
+        }
+
+        return json_encode($returnDetail, JSON_UNESCAPED_UNICODE);
+    }
+
+
+    /**
+     * 设置返回数据详情
+     *
+     * @param array $nameArr
+     * @param array $returnDetail
+     * @param array $detailData
+     */
+    private function setReturnDetail(array $nameArr, array &$returnDetail, array $detailData)
+    {
+        $name = array_shift($nameArr);
+        if(0 == count($nameArr)){
+            $returnDetail[$name]['children'][$detailData['ret_name']]  = $detailData;
+            return;
+        }
+
+        0 < count($nameArr) && $this->setReturnDetail($nameArr, $returnDetail[$name]['children'], $detailData);
+    }
+
 }
