@@ -142,8 +142,8 @@ class ModuleFile extends File
         $this->buildModuleApi();
         // 生成模块配置文件
         $this->buildConfigDir();
-        // 添加到acl库
-        $this->insertModuleAndClient();
+        // 添加到acl库 TODO (此处不再进行处理,移步到 eellyTools module 命令内进行)
+        // $this->insertModuleAndClient();
 
         return $this->returnModuleDirInfo();
     }

@@ -329,7 +329,8 @@ class ApiFile extends File
             $methodParam = $this->getMethodParams($method->getParameters());
             // 在命令行下单独操作Permission时仅对当前操作的这个Permission进行数据库操作
             $isApi = $isCliApi && ('all' === $this->currentPermission ? true : $this->currentPermission === strtolower($method->getName()));
-            if ($isLogic || $isApi) {
+            // TODO (此处isLogic不再进行处理,移步到 eellyTools module/api 命令内进行)
+            if ($isApi) {
                 $hashName = strtolower(str_replace(['\\', 'Logic/', 'Logic'], ['/'], $this->serviceName)).'/'.$method->getName();
                 $descriptions = !empty($methodDoc) ? $this->getMethodDescription($methodDoc) : [];
                 $this->addPermission($hashName, $methodParam, $descriptions);
@@ -471,7 +472,8 @@ EOF;
     {
         $className = $apiName.'Logic';
         $this->serviceName = $this->logicDirInfo['namespace'].'\\'.$className;
-        $this->eellyAcl->addModuleService($this->serviceName, $this->moduleName);
+        // TODO (此处不再进行处理,移步到 eellyTools module 命令内进行)
+        // $this->eellyAcl->addModuleService($this->serviceName, $this->moduleName);
         $classPath = $this->logicDirInfo['path'].'/'.$className.$this->fileExt;
         !file_exists($classPath) && file_put_contents($classPath, $this->getLogicFileCode($className, $apiImplements, $templates));
     }
@@ -539,8 +541,13 @@ EOF;
         $subParamNameArr = $subParamArr[3] ?? [];
         $subParamdDescribeArr = $subParamArr[4] ?? [];
         array_walk($parentParamArr, function($val, $key) use (&$subParam, $subParamTypeArr, $subParamNameArr, $subParamdDescribeArr){
+            $subParamName = $subParamNameArr[$key] ?? '';
+            if(false !== strrpos($subParamName, '][')){
+                $nameArr = explode('][', $subParamName);
+                $subParamName = array_pop($nameArr);
+            }
             $subParam[$val][] = [
-                'name' => isset($subParamNameArr[$key]) ? trim($subParamNameArr[$key], '\'"') : '',
+                'name' => trim($subParamName, '\'"'),
                 'type' => $subParamTypeArr[$key] ?? '',
                 'describe' => $subParamdDescribeArr[$key] ?? '',
             ];
@@ -591,7 +598,7 @@ EOF;
         $this->eellyAcl->addPermission($hashName, $this->serviceName, $permissionData);
         $requestExample = json_decode($descriptions['requestExample'], true) ?: [];
         $returnExample = $descriptions['returnExample'];
-        $paramExample = $this->getParamExample($methodParam, $requestExample);
+        $paramExample = is_array($requestExample) ? $this->getParamExample($methodParam, $requestExample) : [];
         $subParam = $descriptions['subParam'];
         $subRequestData = [];
         if(!empty($methodParam)){
@@ -843,10 +850,11 @@ EOF;
             return '';
         }
 
+        $isMultiple = 0 === strpos($parentParamExample, '[');
         $parentParamExample = json_decode($parentParamExample, true);
-        count($parentParamExample) != count($parentParamExample, COUNT_RECURSIVE) && $parentParamExample = current($parentParamExample);
+        $isMultiple && $parentParamExample = current($parentParamExample);
 
-        return $parentParamExample[$subName] ?? '';
+        return isset($parentParamExample[$subName]) ? json_encode($parentParamExample[$subName]) : '';
     }
 
     /**
