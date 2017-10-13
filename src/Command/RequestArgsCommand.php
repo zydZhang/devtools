@@ -158,7 +158,7 @@ class RequestArgsCommand extends BaseCommand
         foreach($arguments as $offset => $argument){
             if(!isset($argument['name'])){
                 if (isset($argument['expr']['items'])) {
-                    $items = $this->getExprArguments($argument['expr']['items'], $parentName);
+                    $items = $this->getExprArguments($argument['expr']['items'], $parentName . $offset . '_');
                 } else {
                     $type = $argument['expr']['type'];
                     $items[$parentName . $offset] = $this->parameterType[$type] ?? '';
