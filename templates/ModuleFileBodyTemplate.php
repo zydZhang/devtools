@@ -48,9 +48,9 @@
     /**
      * {@inheritdoc}
      *
-     * @see \Eelly\Mvc\AbstractModule::registerCommands()
+     * @see \Eelly\Mvc\AbstractModule::registerUserCommands()
      */
-    public function registerCommands(\Eelly\Console\Application $app): void
+    public function registerUserCommands(\Eelly\Console\Application $app): void
     {
         /**
         parent::registerCommands($app);
