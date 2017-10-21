@@ -29,14 +29,15 @@ class DevTools extends Injectable
 
     public function run(): void
     {
-        if (in_array($this->config->env, [\Eelly\Application\ApplicationConst::ENV_TEST, \Eelly\Application\ApplicationConst::ENV_DEVELOPMENT])) {
+        $buildMode = $GLOBALS['buildMode'] ?? false;
+
+        if (!$buildMode && in_array($this->config->env, [\Eelly\Application\ApplicationConst::ENV_TEST, \Eelly\Application\ApplicationConst::ENV_DEVELOPMENT])) {
             $eventsManager = $this->di->getEventsManager();
             $interceptCenter = new InterceptCenter($eventsManager);
             $interceptCenter->registAnnotation();
-            $this->config->mysqlMode && $interceptCenter->registDbListener();       
+            $this->config->mysqlMode && $interceptCenter->registDbListener();
         }
 
-        $buildMode = $GLOBALS['buildMode'] ?? false;
         if (\Eelly\Application\ApplicationConst::ENV_DEVELOPMENT == $this->config->env && $buildMode) {
             $this->cliTools();
         }
