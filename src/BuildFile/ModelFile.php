@@ -67,8 +67,11 @@ class ModelFile extends File
                 'charset' => $config->dbCharset
             ]);
         } catch (\PDOException $e) {
-            $this->unlinkFile($this->baseDir . '/' . ucfirst($moduleName));
-            exit($dbName . '生成Model失败,' . $e->getMessage() . ',检查数据库配置是否正确' . PHP_EOL . $dbName . '模块构建失败');
+            echo $dbName . '生成Model失败,' . $e->getMessage() . ',检查数据库配置是否正确' . PHP_EOL . $dbName . '模块构建失败' . PHP_EOL;
+            fwrite(STDOUT, '是否清除生成的文件(错误配置会导致生成脏文件)，请慎重选择：[Y/N]' . PHP_EOL );
+            $input = strtolower(trim(fgets(STDIN)));
+            'y' === $input && $this->unlinkFile($this->baseDir . '/' . ucfirst($moduleName));
+            exit();
         }
         $this->di->setShared('db', $db);
 
